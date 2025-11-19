@@ -232,8 +232,8 @@ The plugin is highly configurable. Check `config.toml` for:
 ### Planned Features
 
 #### Warden Tools
-- [ ] Warden laser pointer - Hold E to show a laser where he looks.
-- [ ] Ping beacon for warden - Let warden place markers on the map
+- [x] Warden laser pointer - Hold E to show a laser where he looks.
+- [x] Ping beacon for warden - Let warden place markers on the map
 - [ ] Expand warden menu - More tools and options for better control
 
 #### Last Request Improvements
