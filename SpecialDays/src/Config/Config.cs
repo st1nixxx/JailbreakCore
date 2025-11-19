@@ -9,6 +9,7 @@ public class DaysConfig
     public HeadshotOnlyConfig HeadshotOnly { get; set; } = new();
     public HideAndSeekConfig HideAndSeek { get; set; } = new();
     public KnifeFightConfig KnifeFight { get; set; } = new();
+    public FreezeTagConfig FreezeTag { get; set; } = new();
 }
 public class FreeForAllConfig
 {
@@ -49,4 +50,11 @@ public class KnifeFightConfig
     public int DelayCooldown { get; set; } = 15;
     public float Gravity { get; set; } = 0.6f; // if day type is knife (gravity)
     public float Speed { get; set; } = 2.3f; // if day type is knife (speed)
+}
+public class FreezeTagConfig
+{
+    public bool Enable { get; set; } = true;
+    public int DelayCooldown { get; set; } = 15;
+    public float UnfreezeRadius { get; set; } = 100.0f;
+    public float UnfreezeTime { get; set; } = 3.0f; 
 }

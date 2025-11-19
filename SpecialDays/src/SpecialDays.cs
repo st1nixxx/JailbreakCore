@@ -82,6 +82,9 @@ public partial class SpecialDays : BasePlugin
 
         if (Config.KnifeFight.Enable && Config.KnifeFight.Gravity < 1.0f)
             Api.SpecialDay.Register(new KnifeFight_Gravity_Day(Core, Api, Library));
+
+        if (Config.FreezeTag.Enable)
+            Api.SpecialDay.Register(new FreezeTag_Day(Core, Api, Library));
     }
     public void Unregister()
     {
@@ -111,6 +114,9 @@ public partial class SpecialDays : BasePlugin
 
         if (Config.KnifeFight.Enable && Config.KnifeFight.Gravity < 1.0f)
             Api.SpecialDay.Unregister(new KnifeFight_Gravity_Day(Core, Api, Library));
+
+        if (Config.FreezeTag.Enable)
+            Api.SpecialDay.Unregister(new FreezeTag_Day(Core, Api, Library));
     }
     public static readonly Dictionary<string, int> WeaponItemDefinitionIndices = new()
     {
@@ -1317,5 +1323,265 @@ public class FFA_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _library) :
         Library.ToggleFriendlyFire(false);
 
         Core.Engine.ExecuteCommand($"sv_teamid_overhead 1");
+    }
+}
+public class FreezeTag_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _library) : ISpecialDay
+{
+    private readonly ISwiftlyCore Core = _core;
+    private readonly IJailbreakApi Api = _api;
+    private readonly Library Library = _library;
+    private FreezeTagConfig Config => SpecialDays.Config.FreezeTag;
+    private int DelayCooldown = SpecialDays.Config.FreezeTag.DelayCooldown;
+    public string Name => Core.Localizer["freeze_tag_day<name>"];
+    public string Description => Core.Localizer["freeze_tag_day<description>"];
+    private CancellationTokenSource? token = null;
+    private bool g_IsTimerActive = false;
+    private IDisposable? damageHook = null;
+    
+    // Track frozen prisoners
+    private Dictionary<IJBPlayer, bool> frozenPrisoners = new();
+    private Dictionary<IJBPlayer, (IJBPlayer unfreezer, float startTime)> unfreezingPrisoners = new();
+
+    public void Start()
+    {
+        damageHook = Api.Hooks.HookTakeDamage(OnTakeDamage);
+        Api.Utilities.ToggleCells(true, "");
+        
+        frozenPrisoners.Clear();
+        unfreezingPrisoners.Clear();
+
+        foreach (var player in Core.PlayerManager.GetAllPlayers())
+        {
+            var jbPlayer = Api.Players.GetPlayer(player);
+            if (jbPlayer == null)
+                continue;
+
+            jbPlayer.PlayerPawn.ItemServices?.RemoveItems();
+            Core.Scheduler.NextTick(() =>
+            {
+                jbPlayer.PlayerPawn.ItemServices?.GiveItem("weapon_knife");
+            });
+
+            if (jbPlayer.Role == IJBRole.Prisoner)
+            {
+                frozenPrisoners[jbPlayer] = false;
+            }
+        }
+
+        token = Core.Scheduler.RepeatBySeconds(1.0f, () =>
+        {
+            DelayCooldown--;
+            if (DelayCooldown > 0)
+            {
+                Core.PlayerManager.SendMessage(MessageType.CenterHTML, Core.Localizer["day_starting", Name, DelayCooldown]);
+                g_IsTimerActive = true;
+            }
+            else
+            {
+                Core.PlayerManager.SendMessage(MessageType.CenterHTML, "");
+                token?.Cancel();
+                token = null;
+                g_IsTimerActive = false;
+                
+                StartUnfreezeCheckTimer();
+            }
+        });
+
+        Core.Event.OnItemServicesCanAcquireHook += CanAcquireFunc;
+    }
+
+    private void StartUnfreezeCheckTimer()
+    {
+        Core.Scheduler.RepeatBySeconds(0.1f, () =>
+        {
+            if (g_IsTimerActive)
+                return;
+
+            CheckUnfreezing();
+            CheckWinCondition();
+        });
+    }
+
+    private void CheckUnfreezing()
+    {
+        var currentTime = Core.Engine.GlobalVars.CurrentTime;
+        List<IJBPlayer> toUnfreeze = new();
+
+        foreach (var (frozen, data) in unfreezingPrisoners.ToList())
+        {
+            if (currentTime - data.startTime >= Config.UnfreezeTime)
+            {
+                toUnfreeze.Add(frozen);
+            }
+            else
+            {
+                var unfreezer = data.unfreezer;
+                if (!unfreezer.IsValid || unfreezer.PlayerPawn == null || frozen.PlayerPawn == null)
+                {
+                    unfreezingPrisoners.Remove(frozen);
+                    continue;
+                }
+
+                var distance = CalculateDistance(unfreezer.PlayerPawn.AbsOrigin!.Value, frozen.PlayerPawn.AbsOrigin!.Value);
+                if (distance > Config.UnfreezeRadius)
+                {
+                    unfreezingPrisoners.Remove(frozen);
+                    Api.Utilities.PrintToChatAll($"{unfreezer.Controller.PlayerName} stopped unfreezing {frozen.Controller.PlayerName}", false, IPrefix.JB);
+                }
+            }
+        }
+        foreach (var frozen in toUnfreeze)
+        {
+            UnfreezePrisoner(frozen);
+            unfreezingPrisoners.Remove(frozen);
+        }
+
+        foreach (var prisoner in frozenPrisoners.Keys.ToList())
+        {
+            if (!frozenPrisoners[prisoner] || !prisoner.IsValid)
+                continue;
+            if (unfreezingPrisoners.ContainsKey(prisoner))
+                continue;
+
+            foreach (var helper in frozenPrisoners.Keys.Where(p => !frozenPrisoners[p] && p.IsValid && p.PlayerPawn != null))
+            {
+                if (prisoner.PlayerPawn == null || helper.PlayerPawn == null)
+                    continue;
+
+                var distance = CalculateDistance(helper.PlayerPawn.AbsOrigin!.Value, prisoner.PlayerPawn.AbsOrigin!.Value);
+                
+                if (distance <= Config.UnfreezeRadius)
+                {
+                    unfreezingPrisoners[prisoner] = (helper, currentTime);
+                    Api.Utilities.PrintToChatAll($"{helper.Controller.PlayerName} is unfreezing {prisoner.Controller.PlayerName}!", false, IPrefix.JB);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void CheckWinCondition()
+    {
+        var alivePrisoners = frozenPrisoners.Where(kvp => kvp.Key.IsValid && kvp.Key.Controller.PawnIsAlive).ToList();
+        
+        if (alivePrisoners.Count == 0)
+            return;
+
+        var allFrozen = alivePrisoners.All(kvp => kvp.Value);
+        
+        if (allFrozen)
+        {
+            Api.Utilities.PrintToChatAll("All prisoners are frozen! Guards win!", true, IPrefix.JB);
+            
+            foreach (var prisoner in alivePrisoners.Select(kvp => kvp.Key))
+            {
+                if (prisoner.IsValid && prisoner.PlayerPawn != null)
+                {
+                    prisoner.PlayerPawn.CommitSuicide(false, true);
+                }
+            }
+            
+            Api.SpecialDay.EndActive();
+        }
+    }
+
+    private float CalculateDistance(Vector pos1, Vector pos2)
+    {
+        float dx = pos1.X - pos2.X;
+        float dy = pos1.Y - pos2.Y;
+        float dz = pos1.Z - pos2.Z;
+        return (float)Math.Sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    public HookResult OnTakeDamage(DamageHookContext context)
+    {
+        if (g_IsTimerActive)
+        {
+            context.Info.Damage = 0;
+            return HookResult.Handled;
+        }
+
+        var attacker = context.Attacker;
+        var victim = context.Victim;
+
+        if (attacker.Role == IJBRole.Guardian && victim.Role == IJBRole.Prisoner)
+        {
+            if (frozenPrisoners.ContainsKey(victim) && !frozenPrisoners[victim])
+            {
+                FreezePrisoner(victim);
+                Api.Utilities.PrintToChatAll($"{attacker.Controller.PlayerName} froze {victim.Controller.PlayerName}!", false, IPrefix.JB);
+            }
+            
+            context.Info.Damage = 0;
+            return HookResult.Handled;
+        }
+
+        context.Info.Damage = 0;
+        return HookResult.Handled;
+    }
+
+    private void FreezePrisoner(IJBPlayer prisoner)
+    {
+        if (!prisoner.IsValid)
+            return;
+
+        frozenPrisoners[prisoner] = true;
+        Library.Freeze(prisoner, true);
+        
+        prisoner.PlayerPawn.RenderMode = RenderMode_t.kRenderTransColor;
+        prisoner.PlayerPawn.Render = new SwiftlyS2.Shared.Natives.Color(100, 150, 255, 150);
+    }
+
+    private void UnfreezePrisoner(IJBPlayer prisoner)
+    {
+        if (!prisoner.IsValid)
+            return;
+
+        frozenPrisoners[prisoner] = false;
+        Library.Freeze(prisoner, false);
+        
+        prisoner.PlayerPawn.RenderMode = RenderMode_t.kRenderNormal;
+        prisoner.PlayerPawn.Render = new SwiftlyS2.Shared.Natives.Color(255, 255, 255, 255);
+        
+        Api.Utilities.PrintToChatAll($"{prisoner.Controller.PlayerName} has been unfrozen!", false, IPrefix.JB);
+    }
+
+    public void CanAcquireFunc(IOnItemServicesCanAcquireHookEvent @event)
+    {
+        var econItem = @event.EconItemView;
+        
+        var knifes = new[]
+        {
+            41, 42, 59, 500, 503, 505, 506, 507, 508, 509, 512, 514, 515, 516, 517, 518, 519, 520, 521, 522, 523, 525, 526
+        };
+
+        if (!knifes.Contains(econItem.ItemDefinitionIndex))
+        {
+            @event.SetAcquireResult(AcquireResult.NotAllowedByProhibition);
+        }
+    }
+
+    public void End()
+    {
+        damageHook?.Dispose();
+        damageHook = null;
+        
+        token?.Cancel();
+        token = null;
+
+        Core.Event.OnItemServicesCanAcquireHook -= CanAcquireFunc;
+
+        foreach (var prisoner in frozenPrisoners.Keys.ToList())
+        {
+            if (prisoner.IsValid && frozenPrisoners[prisoner])
+            {
+                Library.Freeze(prisoner, false);
+                prisoner.PlayerPawn.RenderMode = RenderMode_t.kRenderNormal;
+                prisoner.PlayerPawn.Render = new SwiftlyS2.Shared.Natives.Color(255, 255, 255, 255);
+            }
+        }
+
+        frozenPrisoners.Clear();
+        unfreezingPrisoners.Clear();
     }
 }

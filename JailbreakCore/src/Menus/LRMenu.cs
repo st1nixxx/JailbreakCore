@@ -36,7 +36,7 @@ public class LRMenu(ISwiftlyCore _core, Extensions _extensions)
 
         foreach (var g in guardians)
         {
-            if (request.GetAvalibleTypes != null && request.GetAvalibleTypes().Any())
+            if (request.GetAvailableTypes != null && request.GetAvailableTypes().Any())
             {
                 var typeMenu = OpenTypeMenu(prisoner, g, request, menu);
                 var option = new SubmenuMenuOption(g.Controller.PlayerName, typeMenu);
@@ -58,7 +58,7 @@ public class LRMenu(ISwiftlyCore _core, Extensions _extensions)
     {
         var menu = _Extensions.CreateMenu(_Core.Translation.GetPlayerLocalizer(prisoner.Player)["last_request_type_menu<title>"], parent);
 
-        foreach (var type in request.GetAvalibleTypes())
+        foreach (var type in request.GetAvailableTypes())
         {
             var weaponsMenu = OpenWeaponsMenu(prisoner, guardian, request, menu);
             var option = new SubmenuMenuOption(type, weaponsMenu);
