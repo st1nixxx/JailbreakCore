@@ -216,7 +216,7 @@ public class Extensions(ISwiftlyCore core)
             }
             if (!string.IsNullOrEmpty(JailbreakCore.Config.Sounds.Box.Path) && state)
             {
-                jbPlayer.PlaySound(JailbreakCore.Config.Sounds.Box.Path, JailbreakCore.Config.Sounds.Box.Volume);
+                //jbPlayer.PlaySound(JailbreakCore.Config.Sounds.Box.Path, JailbreakCore.Config.Sounds.Box.Volume);
             }
         }
     }
