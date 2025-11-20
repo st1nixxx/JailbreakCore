@@ -21,6 +21,7 @@
   "special_day_pending": "[gold]{0}[default] queued the Special Day [lime]{1}[default].",
   "warden_menu<title>": "Warden Menu",
   "select_player<title>": "Select Player",
+  "select_color<title>": "Select Color",
   "sd_menu<title>": "Select Day",
   "last_request_menu<title>": "Last Request",
   "last_request_guardian_menu<title>": "Select A Guardian",
@@ -34,6 +35,7 @@
   "toggle_cells<option>": "Toggle Cells",
   "toggle_box<option>": "Toggle Box",
   "add_freeday<option>": "Add Freeday",
+  "set_color<option>": "Set Color",
   "cells_toggled": "[blue]{0}[default] {1} the cells!",
   "freeday_given": "[blue]Warden[default] gave freeday to [orange]{0}[default].",
   "lr_not_avaliable": "LR is not avaliable right now. Try again later.",
@@ -54,3 +56,4 @@
   "prisoner_unmuted": "Every prisoner is muted for {0} seconds!",
   "bh_toggled": "Bunnyhooping is now {0}!"
 }
+

@@ -28,6 +28,14 @@
     </Content>
   </ItemGroup>
 
+  <Target Name="CopyJailbreakApiToExports" AfterTargets="Build">
+    <ItemGroup>
+      <JailbreakApiFiles Include="$(OutputPath)\JailbreakApi.dll;$(OutputPath)\JailbreakApi.pdb" />
+    </ItemGroup>
+    <MakeDir Directories="$(OutputPath)\resources\exports" />
+    <Copy SourceFiles="@(JailbreakApiFiles)" DestinationFolder="$(OutputPath)\resources\exports" SkipUnchangedFiles="true" />
+  </Target>
+
   <ItemGroup>
     <Compile Remove="examples\**\*.cs" />
   </ItemGroup>

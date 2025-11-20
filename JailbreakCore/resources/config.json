@@ -1,0 +1,60 @@
+{
+  "Warden": {
+    "ShowMenuOnSet": true,
+    "Commands": {
+      "Warden": ["w", "warden"],
+      "Unwarden": ["uw", "unwarden"],
+      "Box": ["box"],
+      "WardenMenu": ["wmenu"]
+    }
+  },
+  "Prisoner": {
+    "Commands": {
+      "SpecialDay": ["sd"]
+    },
+    "SurrenderTriesXRound": 2,
+    "HealTriesXRound": 2,
+    "PrisonerMuteDuration": 30
+  },
+  "Colors": {
+    "RebelColor": [255, 0, 0],
+    "FreedayColor": [0, 255, 0],
+    "WardenColor": [0, 0, 255]
+  },
+  "Sounds": {
+    "WardenKilled": {
+      "Path": "",
+      "Volume": 0.5
+    },
+    "WardenTake": {
+      "Path": "",
+      "Volume": 0.5
+    },
+    "WardenRemoved": {
+      "Path": "",
+      "Volume": 0.5
+    },
+    "Rebel": {
+      "Path": "",
+      "Volume": 0.5
+    },
+    "Box": {
+      "Path": "",
+      "Volume": 0.5
+    }
+  },
+  "Models": {
+    "Warden": "",
+    "Guardian": "",
+    "Prisoner": ""
+  },
+  "Bunnyhoop": {
+    "Enable": true,
+    "RoundStartCooldown": 30,
+    "EnableOnLastRequest": true,
+    "EnableOnSpecialDay": true
+  },
+  "SpecialDay": {
+    "CooldownInRounds": 3
+  }
+}

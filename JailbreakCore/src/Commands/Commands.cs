@@ -179,13 +179,13 @@ public class Commands(ISwiftlyCore core)
 
         JailbreakCore.Extensions.PrintToAlertAll("warden_take_alert", jbPlayer.Controller.PlayerName);
 
-        if (!string.IsNullOrEmpty(JailbreakCore.Config.Sounds.WardenTake.Path))
-        {
-            foreach (var otherJbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
-            {
-                otherJbPlayer.PlaySound(JailbreakCore.Config.Sounds.WardenTake.Path, JailbreakCore.Config.Sounds.WardenTake.Volume);
-            }
-        }
+        //if (!string.IsNullOrEmpty(JailbreakCore.Config.Sounds.WardenTake.Path))
+        //{
+        //    foreach (var otherJbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+        //    {
+        //        otherJbPlayer.PlaySound(JailbreakCore.Config.Sounds.WardenTake.Path, JailbreakCore.Config.Sounds.WardenTake.Volume);
+        //    }
+        //}
     }
 
     private void Command_GiveUpWarden(ICommandContext context)
@@ -218,26 +218,26 @@ public class Commands(ISwiftlyCore core)
         JailbreakCore.Extensions.PrintToAlertAll("warden_gave_up", currentWarden.Controller.PlayerName,
         JailbreakCore.Config.Warden.Commands.TakeWarden.FirstOrDefault()!);
 
-        if (!string.IsNullOrEmpty(JailbreakCore.Config.Sounds.WardenRemoved.Path))
-        {
-            foreach (var otherJbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
-            {
-                otherJbPlayer.PlaySound(JailbreakCore.Config.Sounds.WardenRemoved.Path, JailbreakCore.Config.Sounds.WardenRemoved.Volume);
-            }
-        }
+        //if (!string.IsNullOrEmpty(JailbreakCore.Config.Sounds.WardenRemoved.Path))
+        //{
+        //    foreach (var otherJbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+        //    {
+        //        otherJbPlayer.PlaySound(JailbreakCore.Config.Sounds.WardenRemoved.Path, JailbreakCore.Config.Sounds.WardenRemoved.Volume);
+        //    }
+        //}
 
         _Core.Scheduler.DelayBySeconds(5.0f, () =>
         {
             if (JailbreakCore.JBPlayerManagement.GetWarden() == null)
             {
                 JailbreakCore.Extensions.AssignRandomWarden();
-                if (!string.IsNullOrEmpty(JailbreakCore.Config.Sounds.WardenTake.Path))
-                {
-                    foreach (var otherJbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
-                    {
-                        otherJbPlayer.PlaySound(JailbreakCore.Config.Sounds.WardenTake.Path, JailbreakCore.Config.Sounds.WardenTake.Volume);
-                    }
-                }
+                //if (!string.IsNullOrEmpty(JailbreakCore.Config.Sounds.WardenTake.Path))
+                //{
+                //    foreach (var otherJbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+                //    {
+                //        otherJbPlayer.PlaySound(JailbreakCore.Config.Sounds.WardenTake.Path, JailbreakCore.Config.Sounds.WardenTake.Volume);
+                //    }
+                //}
                 JailbreakCore.Extensions.PrintToCenterAll("warden_take_alert", JailbreakCore.JBPlayerManagement.GetWarden()?.Controller.PlayerName ?? "");
             }
         });
