@@ -28,8 +28,6 @@ public partial class SpecialDays : BasePlugin
     public override void UseSharedInterface(IInterfaceManager interfaceManager)
     {
         Api = interfaceManager.GetSharedInterface<IJailbreakApi>("Jailbreak.Core");
-
-        Register();
     }
     public override void Load(bool hotReload)
     {

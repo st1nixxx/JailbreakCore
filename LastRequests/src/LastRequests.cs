@@ -23,8 +23,6 @@ public partial class LastRequests : BasePlugin
     public override void UseSharedInterface(IInterfaceManager interfaceManager)
     {
         Api = interfaceManager.GetSharedInterface<IJailbreakApi>("Jailbreak.Core");
-
-        Register();
     }
     public override void Load(bool hotReload)
     {
@@ -44,7 +42,7 @@ public partial class LastRequests : BasePlugin
         Config = _provider.GetRequiredService<IOptions<LRConfig>>().Value;
         Library = _provider.GetRequiredService<Library>();
 
-
+        Register();
     }
 
     public override void Unload()
