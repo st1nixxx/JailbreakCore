@@ -134,7 +134,7 @@ public interface IUtilityService
     /// </summary>
     /// <param name="key">Key that is localized in JailbreakCore translation folder.</param>
     /// <param name="args">Arguments</param>
-    void PrintToCenterALl(string key, params object[] args);
+    void PrintToCenterAll(string key, params object[] args);
 }
 
 /// <summary>Context supplied to TakeDamage hook subscribers.</summary>
