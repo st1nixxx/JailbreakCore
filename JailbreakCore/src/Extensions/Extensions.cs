@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using Jailbreak.Shared;
 using Microsoft.Extensions.Logging;
@@ -17,8 +18,66 @@ public class Extensions(ISwiftlyCore core)
     private readonly Dictionary<JBPlayer, CEnvBeam?> _wardenLasers = new();
     private readonly List<CEnvBeam?> _wardenBeacons = new();
     private readonly Dictionary<JBPlayer, List<CEnvBeam?>> _wardenBeaconsByPlayer = new();
+    private readonly Dictionary<Guid, PlayerLinkLaserEffect> _playerLinkLasers = new();
+    private readonly Dictionary<Guid, PlayerBeaconEffect> _playerBeaconAnimations = new();
     private static readonly Vector ANGLE_ZERO = new Vector(0, 0, 0);
     private static readonly Vector VEC_ZERO = new Vector(0, 0, 0);
+
+    private sealed class PlayerLinkLaserEffect
+    {
+        public PlayerLinkLaserEffect(JBPlayer playerA, JBPlayer playerB, Color color, float width, float heightOffset, TimeSpan? lifespan)
+        {
+            PlayerA = playerA;
+            PlayerB = playerB;
+            Color = color;
+            Width = width;
+            HeightOffset = heightOffset;
+            ExpireAtUtc = lifespan.HasValue ? DateTimeOffset.UtcNow.Add(lifespan.Value) : null;
+        }
+
+        public JBPlayer PlayerA { get; }
+        public JBPlayer PlayerB { get; }
+        public Color Color { get; }
+        public float Width { get; }
+        public float HeightOffset { get; }
+        public DateTimeOffset? ExpireAtUtc { get; }
+        public CEnvBeam? Beam { get; set; }
+    }
+
+    private sealed class PlayerBeaconEffect
+    {
+        public PlayerBeaconEffect(JBPlayer player, List<CEnvBeam?> segments, Color color, float radius, float radiusStep, float heightOffset, float durationSeconds, float width, TimeSpan stepInterval, bool loop)
+        {
+            Player = player;
+            Segments = segments;
+            Color = color;
+            Radius = radius;
+            ResetRadius = radius;
+            RadiusStep = radiusStep;
+            HeightOffset = heightOffset;
+            DurationSeconds = durationSeconds;
+            Width = width;
+            StepInterval = stepInterval;
+            Loop = loop;
+            NextStepAtUtc = DateTimeOffset.UtcNow;
+            AngleStep = segments.Count > 0 ? (float)(2 * Math.PI / segments.Count) : 0f;
+        }
+
+        public JBPlayer Player { get; }
+        public List<CEnvBeam?> Segments { get; }
+        public Color Color { get; }
+        public float Radius { get; set; }
+        public float ResetRadius { get; }
+        public float RadiusStep { get; }
+        public float HeightOffset { get; }
+        public float DurationSeconds { get; }
+        public float ElapsedSeconds { get; set; }
+        public float Width { get; }
+        public TimeSpan StepInterval { get; }
+        public DateTimeOffset NextStepAtUtc { get; set; }
+        public bool Loop { get; }
+        public float AngleStep { get; }
+    }
     public void PrintToChatAll(string message, bool showPrefix, IPrefix prefixType)
     {
         string prefix = "";
@@ -440,11 +499,302 @@ public class Extensions(ISwiftlyCore core)
             RemoveLaser(laser);
         }
         _wardenLasers.Clear();
+
+        StopAllPlayerLinkLasers();
+    }
+
+    /// <summary>
+    /// Starts a persistent laser that links two players together. The beam is updated every tick.
+    /// </summary>
+    /// <param name="playerA">First player.</param>
+    /// <param name="playerB">Second player.</param>
+    /// <param name="colorOverride">Optional custom color.</param>
+    /// <param name="width">Beam width.</param>
+    /// <param name="heightOffset">Height offset from the player's origin (defaults to approximate eye level).</param>
+    /// <param name="durationSeconds">Positive value to auto-expire after the provided time; zero/negative keeps it alive until removed.</param>
+    public Guid StartPlayerLinkLaser(JBPlayer playerA, JBPlayer playerB, Color? colorOverride = null, float width = 2.0f, float heightOffset = 64.0f, float durationSeconds = 0f)
+    {
+        ArgumentNullException.ThrowIfNull(playerA);
+        ArgumentNullException.ThrowIfNull(playerB);
+
+        if (playerA == playerB)
+            throw new ArgumentException("Players must be different.", nameof(playerB));
+
+        if (!IsPlayerRenderable(playerA) || !IsPlayerRenderable(playerB))
+            throw new InvalidOperationException("Both players must be valid and alive to start a link laser.");
+
+        TimeSpan? lifespan = durationSeconds > 0 ? TimeSpan.FromSeconds(durationSeconds) : null;
+        var effect = new PlayerLinkLaserEffect(playerA, playerB, colorOverride ?? Color.FromHex("#FFFFFFFF"), Math.Max(0.1f, width), heightOffset, lifespan);
+
+        var id = Guid.NewGuid();
+        _playerLinkLasers[id] = effect;
+
+        if (!UpdatePlayerLinkLaser(effect))
+        {
+            StopPlayerLinkLaser(id);
+            throw new InvalidOperationException("Failed to create link laser entity.");
+        }
+
+        return id;
+    }
+
+    /// <summary>
+    /// Stops an active player link laser.
+    /// </summary>
+    public void StopPlayerLinkLaser(Guid effectId)
+    {
+        if (_playerLinkLasers.TryGetValue(effectId, out var effect))
+        {
+            RemoveLaser(effect.Beam);
+            _playerLinkLasers.Remove(effectId);
+        }
+    }
+
+    /// <summary>
+    /// Removes every active link laser.
+    /// </summary>
+    public void StopAllPlayerLinkLasers()
+    {
+        foreach (var effect in _playerLinkLasers.Values)
+        {
+            RemoveLaser(effect.Beam);
+        }
+
+        _playerLinkLasers.Clear();
+    }
+
+    internal void TickDynamicEffects()
+    {
+        TickPlayerLinkLasers();
+        TickBeaconAnimations();
+    }
+
+    private void TickPlayerLinkLasers()
+    {
+        if (_playerLinkLasers.Count == 0)
+            return;
+
+        List<Guid>? staleEffects = null;
+
+        foreach (var entry in _playerLinkLasers)
+        {
+            if (!UpdatePlayerLinkLaser(entry.Value))
+            {
+                staleEffects ??= new List<Guid>();
+                staleEffects.Add(entry.Key);
+            }
+        }
+
+        if (staleEffects == null)
+            return;
+
+        foreach (var effectId in staleEffects)
+        {
+            StopPlayerLinkLaser(effectId);
+        }
+    }
+
+    private bool UpdatePlayerLinkLaser(PlayerLinkLaserEffect effect)
+    {
+        if (!IsPlayerRenderable(effect.PlayerA) || !IsPlayerRenderable(effect.PlayerB))
+            return false;
+
+        if (effect.ExpireAtUtc.HasValue && DateTimeOffset.UtcNow >= effect.ExpireAtUtc.Value)
+            return false;
+
+        var start = GetPlayerPosition(effect.PlayerA, effect.HeightOffset);
+        var end = GetPlayerPosition(effect.PlayerB, effect.HeightOffset);
+
+        if (!start.HasValue || !end.HasValue)
+            return false;
+
+        if (effect.Beam == null || !effect.Beam.IsValid)
+        {
+            effect.Beam = CreateLaser(start.Value, end.Value, effect.Width, effect.Color);
+            return effect.Beam != null;
+        }
+
+        MoveLaser(effect.Beam, start.Value, end.Value);
+        return true;
     }
 
     #endregion
 
     #region Beacon System
+
+    /// <summary>
+    /// Spawns an animated circular beacon that follows the provided player.
+    /// </summary>
+    /// <param name="player">Target player.</param>
+    /// <param name="colorOverride">Optional custom color for the beacon segments.</param>
+    /// <param name="segments">Number of laser segments to approximate the circle.</param>
+    /// <param name="startRadius">Initial radius of the beacon.</param>
+    /// <param name="radiusStep">How much the radius increases every update step.</param>
+    /// <param name="durationSeconds">Lifetime of the animation. Zero or negative values make it run until removed.</param>
+    /// <param name="heightOffset">Height offset above the player's origin.</param>
+    /// <param name="stepIntervalSeconds">How often to move the beacon outward.</param>
+    /// <param name="width">Beam width for each segment.</param>
+    /// <param name="loop">If true, the beacon resets to the starting radius when it reaches the duration limit.</param>
+    public Guid CreateBeaconAnimationOnPlayer(JBPlayer player, Color? colorOverride = null, int segments = 20, float startRadius = 20.0f,
+        float radiusStep = 10.0f, float durationSeconds = 0.9f, float heightOffset = 5.0f, float stepIntervalSeconds = 0.1f, float width = 2.0f, bool loop = false)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+
+        if (segments < 3)
+            throw new ArgumentOutOfRangeException(nameof(segments), "Beacon animations require at least three segments.");
+
+        if (!IsPlayerRenderable(player))
+            throw new InvalidOperationException("Player must be valid and alive to draw a beacon.");
+
+        var center = GetPlayerPosition(player);
+        if (!center.HasValue)
+            throw new InvalidOperationException("Player does not have a valid origin yet.");
+
+        var color = colorOverride ?? GetDefaultBeaconColor(player);
+        var beams = new List<CEnvBeam?>(segments);
+        float angle = 0f;
+        float angleStep = (float)(2 * Math.PI / segments);
+
+        for (int i = 0; i < segments; i++)
+        {
+            var start = AngleOnCircle(center.Value, angle, startRadius, heightOffset);
+            angle += angleStep;
+            var end = AngleOnCircle(center.Value, angle, startRadius, heightOffset);
+
+            beams.Add(CreateLaser(start, end, width, color));
+        }
+
+        var effect = new PlayerBeaconEffect(
+            player,
+            beams,
+            color,
+            startRadius,
+            radiusStep,
+            heightOffset,
+            durationSeconds,
+            width,
+            TimeSpan.FromSeconds(Math.Max(stepIntervalSeconds, 0.05f)),
+            loop
+        );
+
+        var id = Guid.NewGuid();
+        _playerBeaconAnimations[id] = effect;
+
+        return id;
+    }
+
+    /// <summary>
+    /// Removes a running beacon animation from a player.
+    /// </summary>
+    public void StopPlayerBeacon(Guid beaconId)
+    {
+        if (_playerBeaconAnimations.TryGetValue(beaconId, out var effect))
+        {
+            foreach (var beam in effect.Segments)
+            {
+                RemoveLaser(beam);
+            }
+
+            _playerBeaconAnimations.Remove(beaconId);
+        }
+    }
+
+    /// <summary>
+    /// Stops all custom beacon animations.
+    /// </summary>
+    public void StopAllPlayerBeacons()
+    {
+        foreach (var effect in _playerBeaconAnimations.Values)
+        {
+            foreach (var beam in effect.Segments)
+            {
+                RemoveLaser(beam);
+            }
+        }
+
+        _playerBeaconAnimations.Clear();
+    }
+
+    private void TickBeaconAnimations()
+    {
+        if (_playerBeaconAnimations.Count == 0)
+            return;
+
+        List<Guid>? staleEffects = null;
+
+        foreach (var entry in _playerBeaconAnimations)
+        {
+            if (!UpdateBeaconAnimation(entry.Value))
+            {
+                staleEffects ??= new List<Guid>();
+                staleEffects.Add(entry.Key);
+            }
+        }
+
+        if (staleEffects == null)
+            return;
+
+        foreach (var effectId in staleEffects)
+        {
+            StopPlayerBeacon(effectId);
+        }
+    }
+
+    private bool UpdateBeaconAnimation(PlayerBeaconEffect effect)
+    {
+        if (!IsPlayerRenderable(effect.Player))
+            return false;
+
+        if (effect.AngleStep <= 0f)
+            return false;
+
+        var now = DateTimeOffset.UtcNow;
+        if (now < effect.NextStepAtUtc)
+            return true;
+
+        effect.NextStepAtUtc = now.Add(effect.StepInterval);
+
+        var center = GetPlayerPosition(effect.Player);
+        if (!center.HasValue)
+            return false;
+
+        float angle = 0f;
+        for (int i = 0; i < effect.Segments.Count; i++)
+        {
+            var start = AngleOnCircle(center.Value, angle, effect.Radius, effect.HeightOffset);
+            angle += effect.AngleStep;
+            var end = AngleOnCircle(center.Value, angle, effect.Radius, effect.HeightOffset);
+
+            var beam = effect.Segments[i];
+            if (beam == null || !beam.IsValid)
+            {
+                beam = CreateLaser(start, end, effect.Width, effect.Color);
+                effect.Segments[i] = beam;
+            }
+            else
+            {
+                MoveLaser(beam, start, end);
+            }
+        }
+
+        effect.Radius += effect.RadiusStep;
+        effect.ElapsedSeconds += (float)effect.StepInterval.TotalSeconds;
+
+        if (effect.DurationSeconds > 0f && effect.ElapsedSeconds >= effect.DurationSeconds)
+        {
+            if (effect.Loop)
+            {
+                effect.Radius = effect.ResetRadius;
+                effect.ElapsedSeconds = 0f;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Create a circular beacon at a specific position (drawn on the ground)
@@ -530,6 +880,48 @@ public class Extensions(ISwiftlyCore core)
         }
         _wardenBeacons.Clear();
         _wardenBeaconsByPlayer.Clear();
+
+        StopAllPlayerBeacons();
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private static bool IsPlayerRenderable(JBPlayer? player)
+    {
+        return player != null &&
+            player.IsValid &&
+            player.Controller != null &&
+            player.Controller.PawnIsAlive &&
+            player.PlayerPawn != null &&
+            player.PlayerPawn.IsValid;
+    }
+
+    private static Vector? GetPlayerPosition(JBPlayer player, float heightOffset = 0f)
+    {
+        var absOrigin = player.PlayerPawn.AbsOrigin;
+        if (!absOrigin.HasValue)
+            return null;
+
+        return new Vector(absOrigin.Value.X, absOrigin.Value.Y, absOrigin.Value.Z + heightOffset);
+    }
+
+    private static Vector AngleOnCircle(Vector center, float angle, float radius, float heightOffset)
+    {
+        var x = center.X + radius * (float)Math.Cos(angle);
+        var y = center.Y + radius * (float)Math.Sin(angle);
+        return new Vector(x, y, center.Z + heightOffset);
+    }
+
+    private static Color GetDefaultBeaconColor(JBPlayer player)
+    {
+        return player.Controller.TeamNum switch
+        {
+            (int)Team.T => Color.FromHex("#FF0000FF"),
+            (int)Team.CT => Color.FromHex("#0000FFFF"),
+            _ => Color.FromHex("#FFFFFFFF")
+        };
     }
 
     #endregion
