@@ -72,7 +72,7 @@ public class Api : IJailbreakApi
         {
             CorePlugin.Extensions.PrintToAlertAll(key, args);
         }
-        public void PrintToCenterALl(string key, params object[] args)
+        public void PrintToCenterAll(string key, params object[] args)
         {
             CorePlugin.Extensions.PrintToCenterAll(key, args);
         }
