@@ -61,7 +61,7 @@ public class WardenMenu(ISwiftlyCore _core, Extensions _extensions)
     {
         var menu = _Extensions.CreateMenu(_Core.Translation.GetPlayerLocalizer(player.Player)["select_color<title>"], parent);
 
-        var inputOption = new InputMenuOption(16, (value) => !string.IsNullOrWhiteSpace(value) && value.Length >= 3, "red", "Red, Blue, etc...");
+        var inputOption = new InputMenuOption(16, (value) => !string.IsNullOrWhiteSpace(value) && value.Length >= 3, "blue...red..etc..", "red");
 
         inputOption.ValueChanged += (sender, args) =>
         {

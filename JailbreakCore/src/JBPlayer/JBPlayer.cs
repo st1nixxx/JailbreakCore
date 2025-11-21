@@ -1,4 +1,4 @@
-using AudioApi;
+//using AudioApi;
 using Jailbreak.Shared;
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Natives;
@@ -304,15 +304,26 @@ public class JBPlayer : IDisposable, IJBPlayer
     {
         _Core.Scheduler.NextTick(() =>
         {
-            var color = new Color(
-            JailbreakCore.Config.Colors.WardenColor[0],
-            JailbreakCore.Config.Colors.WardenColor[1],
-            JailbreakCore.Config.Colors.WardenColor[2]);
+            if (!IsValid || !PlayerPawn.IsValid)
+                return;
 
-            SetColor(color);
+            // Color rendering causes crash - disabled for now
+            //try
+            //{
+            //    var color = new Color(
+            //    JailbreakCore.Config.Colors.WardenColor[0],
+            //    JailbreakCore.Config.Colors.WardenColor[1],
+            //    JailbreakCore.Config.Colors.WardenColor[2]);
+            //
+            //    SetColor(color);
+            //}
+            //catch
+            //{
+            //    // Ignore color setting errors
+            //}
 
-            if (!string.IsNullOrEmpty(WardenModel))
-                PlayerPawn.SetModel(WardenModel);
+            //if (!string.IsNullOrEmpty(WardenModel))
+            //    PlayerPawn.SetModel(WardenModel);
         });
     }
     private void ClearWaden()
@@ -337,6 +348,9 @@ public class JBPlayer : IDisposable, IJBPlayer
     {
         _Core.Scheduler.NextTick(() =>
         {
+            if (!IsValid || !PlayerPawn.IsValid)
+                return;
+
             PlayerPawn.RenderMode = RenderMode_t.kRenderTransColor;
             PlayerPawn.RenderModeUpdated();
             PlayerPawn.Render = color;

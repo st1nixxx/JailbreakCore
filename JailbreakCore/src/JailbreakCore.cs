@@ -1,4 +1,4 @@
-using AudioApi;
+//using AudioApi;
 using Jailbreak;
 using Jailbreak.Shared;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +30,7 @@ public partial class JailbreakCore : BasePlugin
     public static SurrenderMenu SurrenderMenu = null!;
     public static HealMenu HealMenu = null!;
     public static Hooks Hooks = null!;
-    public static IAudioApi Audio = null!;
+    //public static IAudioApi Audio = null!;
     public static JailbreakConfig Config { get; set; } = new JailbreakConfig();
 
     public static bool g_IsBoxActive = false;
@@ -52,7 +52,7 @@ public partial class JailbreakCore : BasePlugin
 
     public override void UseSharedInterface(IInterfaceManager interfaceManager)
     {
-        Audio = interfaceManager.GetSharedInterface<IAudioApi>("audio");
+        //Audio = interfaceManager.GetSharedInterface<IAudioApi>("audio");
     }
     public override void Load(bool hotReload)
     {
@@ -119,6 +119,9 @@ public partial class JailbreakCore : BasePlugin
     {
         IPlayer player = @event.UserIdPlayer;
         IPlayer attacker = Core.PlayerManager.GetPlayer(@event.Attacker);
+
+        if (player == null || player.PlayerPawn == null || attacker == null || attacker.PlayerPawn == null)
+            return HookResult.Continue;
 
         JBPlayer jbAttacker = JBPlayerManagement.GetOrCreate(attacker);
         JBPlayer jbVictim = JBPlayerManagement.GetOrCreate(player);
@@ -322,6 +325,9 @@ public partial class JailbreakCore : BasePlugin
         if (attackerPlayer == null || victimPlayer == null || attackerPlayer == victimPlayer)
             return HookResult.Continue;
 
+        if (attackerPlayer.PlayerPawn == null || victimPlayer.PlayerPawn == null)
+            return HookResult.Continue;
+
         JBPlayer jbAttacker = JBPlayerManagement.GetOrCreate(attackerPlayer);
 
         if (jbAttacker.Role == IJBRole.Prisoner)
@@ -401,7 +407,7 @@ public partial class JailbreakCore : BasePlugin
         Extensions.TickDynamicEffects();
 
         var warden = JBPlayerManagement.GetWarden();
-        if (warden == null || !warden.IsValid || !warden.Controller.PawnIsAlive)
+        if (warden == null || !warden.IsValid || !warden.Controller.PawnIsAlive || warden.PlayerPawn == null)
         {
             // No warden or warden is invalid/dead - cleanup any existing laser
             if (warden != null)
