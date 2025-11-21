@@ -363,6 +363,9 @@ public class JBPlayer : IDisposable, IJBPlayer
     }
     public void SetColor(Color color)
     {
+        // Disabled - RenderModeUpdated() causes native crash
+        return;
+        
         _Core.Scheduler.NextTick(() =>
         {
             if (!IsValid || !PlayerPawn.IsValid)
