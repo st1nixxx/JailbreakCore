@@ -170,6 +170,17 @@ public partial class JailbreakCore : BasePlugin
         return HookResult.Continue;
     }
     [GameEventHandler(HookMode.Pre)]
+    public HookResult EventPlayerConnectFull(EventPlayerConnectFull @event)
+    {
+        var player = @event.UserIdPlayer;
+        if (player == null)
+            return HookResult.Continue;
+
+        var jbPlayer = JBPlayerManagement.GetOrCreate(player); // create the JBPlayer before just in case.
+
+        return HookResult.Continue;
+    }
+    [GameEventHandler(HookMode.Pre)]
     public HookResult EventPlayerTeam(EventPlayerTeam @event)
     {
         IPlayer player = @event.UserIdPlayer;
@@ -259,7 +270,8 @@ public partial class JailbreakCore : BasePlugin
 
                             randomGuardian.SetWarden(true);
                             Extensions.PrintToCenterAll("warden_take_alert", playerName);
-                        }                        if (!string.IsNullOrEmpty(Config.Sounds.WardenTake.Path))
+                        }
+                        if (!string.IsNullOrEmpty(Config.Sounds.WardenTake.Path))
                         {
                             foreach (var otherJbPlayer in JBPlayerManagement.GetAllPlayers())
                             {
@@ -469,4 +481,3 @@ public partial class JailbreakCore : BasePlugin
     #endregion
 
 }
-
