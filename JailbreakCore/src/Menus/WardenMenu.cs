@@ -35,7 +35,7 @@ public class WardenMenu(ISwiftlyCore _core, Extensions _extensions)
         menu.AddOption(toggleCells);
         menu.AddOption(toggleBox);
         menu.AddOption(freedaySubMenu);
-        menu.AddOption(colorSubMenu);
+        //menu.AddOption(colorSubMenu);
 
         _Core.MenusAPI.OpenMenuForPlayer(player.Player, menu);
     }
