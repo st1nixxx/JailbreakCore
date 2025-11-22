@@ -1,8 +1,14 @@
+using System;
 using Jailbreak.Shared;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SwiftlyS2.Shared;
+using SwiftlyS2.Shared.Misc;
+using SwiftlyS2.Shared.Natives;
+using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.Plugins;
+using SwiftlyS2.Shared.SchemaDefinitions;
 using Tomlyn.Extensions.Configuration;
 
 namespace LastRequests;
@@ -140,6 +146,7 @@ public class KnifeFight(ISwiftlyCore _core, IJailbreakApi _api, Library _library
     private readonly ISwiftlyCore Core = _core;
     private readonly IJailbreakApi Api = _api;
     private readonly Library Library = _library;
+    private KnifeFight_LR Config => LastRequests.Config.KnifeFight;
     public string Name => Core.Localizer["knife_fight_lr<name>"];
     public string Description => string.Empty;
 
@@ -159,6 +166,7 @@ public class KnifeFight(ISwiftlyCore _core, IJailbreakApi _api, Library _library
     public IReadOnlyList<string> GetAvailableTypes() => new List<string> { "Normal", "Gravity", "Speed", "OneShot" };
     public bool IsPrepTimerActive { get; set; }
     public bool IsOneShotEnable = false;
+    private IDisposable? _damageHook = null;
     private static IEnumerable<ushort> GetAllowedWeapons()
     {
         var knifes = new[]
@@ -196,10 +204,81 @@ public class KnifeFight(ISwiftlyCore _core, IJailbreakApi _api, Library _library
         Guardian = guardian;
         Prisoner = prisoner;
 
+        _damageHook = Api.Hooks.HookTakeDamage(OnTakeDamage);
+
+        Guardian.Pawn.ItemServices?.RemoveItems();
+        Prisoner.Pawn.ItemServices?.RemoveItems();
+
+        Guardian.Pawn.ItemServices?.GiveItem<CBaseEntity>("weapon_knife");
+        Prisoner.Pawn.ItemServices?.GiveItem<CBaseEntity>("weapon_knife");
+
+        switch (SelectedType)
+        {
+            case "Normal":
+                Library.SetHealth(Prisoner, 100);
+                Library.SetHealth(Guardian, 100);
+                IsOneShotEnable = false;
+                break;
+
+            case "Gravity":
+                Library.SetHealth(Prisoner, 100);
+                Library.SetHealth(Guardian, 100);
+
+                Library.SetGravity(Prisoner, Config.Gravity);
+                Library.SetGravity(Guardian, Config.Gravity);
+                IsOneShotEnable = false;
+                break;
+
+            case "Speed":
+                Library.SetHealth(Prisoner, 100);
+                Library.SetHealth(Guardian, 100);
+
+                Library.SetSpeed(Prisoner, Config.Speed);
+                Library.SetSpeed(Guardian, Config.Speed);
+                IsOneShotEnable = false;
+                break;
+
+            case "OneShot":
+                Library.SetHealth(Prisoner, 1);
+                Library.SetHealth(Guardian, 1);
+
+                IsOneShotEnable = true;
+                break;
+        }
+
+    }
+    public HookResult OnTakeDamage(DamageHookContext context)
+    {
+        var info = context.Info;
+
+        if (IsPrepTimerActive)
+        {
+            info.Damage = 0;
+            return HookResult.Handled;
+        }
+
+        return HookResult.Continue;
+
 
     }
     public void End(IJBPlayer? winner, IJBPlayer? loser)
     {
+        if (winner == null)
+            return;
 
+        string teamColor = winner.Controller.Team == Team.CT
+            ? Helper.ChatColors.Blue
+            : Helper.ChatColors.Orange;
+        string winnerName = $" {teamColor}{winner.Controller.PlayerName}{Helper.ChatColors.Default}";
+        Api.Utilities.PrintToChatAll(Core.Localizer["lr_ended", Name, winnerName], true, IPrefix.LR);
+
+        if (IsOneShotEnable)
+        {
+            Library.SetHealth(winner!, 100);
+            IsOneShotEnable = false;
+        }
+
+        _damageHook?.Dispose();
+        _damageHook = null;
     }
 }

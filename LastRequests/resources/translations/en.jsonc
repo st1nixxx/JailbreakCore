@@ -1,4 +1,5 @@
 {
   "prefix": "[gold][[red]LR[gold]][default] ",
-  "knife_fight_lr<name>": "Knife Fight"
+  "knife_fight_lr<name>": "Knife Fight",
+  "lr_ended": "[yellow]{0}[default] Last Request ended! Winner: {1}"
 }

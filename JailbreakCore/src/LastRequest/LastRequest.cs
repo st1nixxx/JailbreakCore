@@ -60,7 +60,7 @@ public class LastRequest(ISwiftlyCore core)
         {
             if (ActiveRequest == null)
             {
-                StopPrepVisuals();
+                StopPrepVisuals(true, true);
                 PrepTimer?.Cancel();
                 PrepTimer = null;
                 IsPrepTimeActive = false;
@@ -73,8 +73,12 @@ public class LastRequest(ISwiftlyCore core)
             {
                 request.IsPrepTimerActive = false;
                 IsPrepTimeActive = false;
-                StopPrepVisuals();
+                StopPrepVisuals(true, false);
                 StartRequest(guardian, prisoner);
+
+                guardian.Print(IHud.Html, null, "", showPrefix: false);
+                prisoner.Print(IHud.Html, null, "", showPrefix: false);
+
                 PrepTimer?.Cancel();
                 PrepTimer = null;
             }
@@ -106,7 +110,7 @@ public class LastRequest(ISwiftlyCore core)
             ActiveRequest = null;
         }
 
-        StopPrepVisuals();
+        StopPrepVisuals(true, true);
         PrepTimer?.Cancel();
         PrepTimer = null;
         IsPrepTimeActive = false;
@@ -176,24 +180,29 @@ public class LastRequest(ISwiftlyCore core)
         }
     }
 
-    private void StopPrepVisuals()
+    private void StopPrepVisuals(bool laserLink, bool beacon)
     {
-        if (ActiveLinkLaserId.HasValue)
+        if (laserLink)
         {
-            JailbreakCore.Extensions.StopPlayerLinkLaser(ActiveLinkLaserId.Value);
-            ActiveLinkLaserId = null;
+            if (ActiveLinkLaserId.HasValue)
+            {
+                JailbreakCore.Extensions.StopPlayerLinkLaser(ActiveLinkLaserId.Value);
+                ActiveLinkLaserId = null;
+            }
         }
-
-        if (PrisonerBeaconId.HasValue)
+        if (beacon)
         {
-            JailbreakCore.Extensions.StopPlayerBeacon(PrisonerBeaconId.Value);
-            PrisonerBeaconId = null;
-        }
+            if (PrisonerBeaconId.HasValue)
+            {
+                JailbreakCore.Extensions.StopPlayerBeacon(PrisonerBeaconId.Value);
+                PrisonerBeaconId = null;
+            }
 
-        if (GuardianBeaconId.HasValue)
-        {
-            JailbreakCore.Extensions.StopPlayerBeacon(GuardianBeaconId.Value);
-            GuardianBeaconId = null;
+            if (GuardianBeaconId.HasValue)
+            {
+                JailbreakCore.Extensions.StopPlayerBeacon(GuardianBeaconId.Value);
+                GuardianBeaconId = null;
+            }
         }
     }
 

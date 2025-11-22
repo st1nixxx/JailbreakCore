@@ -98,7 +98,7 @@ public class Bunnyhoop_Config
 }
 public class LastRequestConfig
 {
-    public int PrepCountdownSeconds { get; set; } = 5;
+    public int PrepCountdownSeconds { get; set; } = 15;
     public bool ShowHtmlCountdown { get; set; } = true;
     public bool EnableLinkLaser { get; set; } = true;
     public bool EnablePlayerBeacons { get; set; } = true;

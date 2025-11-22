@@ -35,10 +35,10 @@ public class JBPlayer : IDisposable, IJBPlayer
     {
         if (state && !IsWarden)
         {
-          SetRole(IJBRole.Warden);
-          // ConfigureWarden(); // Disabled - causes native crash in RenderModeUpdated()
+            SetRole(IJBRole.Warden);
+            // ConfigureWarden(); // Disabled - causes native crash in RenderModeUpdated()
 
-          if (!Controller.IsHLTV && IsValid)
+            if (!Controller.IsHLTV && IsValid)
             {
                 if (JailbreakCore.Config.Warden.ShowMenuOnSet)
                     JailbreakCore.WardenMenu.Display(this);
@@ -365,8 +365,8 @@ public class JBPlayer : IDisposable, IJBPlayer
     {
         // Disabled - RenderModeUpdated() causes native crash
         return;
-        
-        _Core.Scheduler.NextTick(() =>
+
+        /*_Core.Scheduler.NextTick(() =>
         {
             if (!IsValid || !PlayerPawn.IsValid)
                 return;
@@ -377,6 +377,7 @@ public class JBPlayer : IDisposable, IJBPlayer
             PlayerPawn.RenderUpdated();
 
         });
+        */
     }
     /*public void PlaySound(string mp3path, float volume)
     {
