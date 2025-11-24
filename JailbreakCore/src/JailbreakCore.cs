@@ -120,7 +120,13 @@ public partial class JailbreakCore : BasePlugin
         IPlayer player = @event.UserIdPlayer;
         IPlayer attacker = Core.PlayerManager.GetPlayer(@event.Attacker);
 
-        if (player == null || player.PlayerPawn == null || attacker == null || attacker.PlayerPawn == null)
+        if (player == null || attacker == null)
+            return HookResult.Continue;
+
+        if (player.IsFakeClient || attacker.IsFakeClient)
+            return HookResult.Continue;
+
+        if (player.PlayerPawn == null || attacker.PlayerPawn == null)
             return HookResult.Continue;
 
         JBPlayer jbAttacker = JBPlayerManagement.GetOrCreate(attacker);
@@ -348,6 +354,9 @@ public partial class JailbreakCore : BasePlugin
         IPlayer attackerPlayer = Core.PlayerManager.GetPlayer(@event.Attacker);
 
         if (attackerPlayer == null || victimPlayer == null || attackerPlayer == victimPlayer)
+            return HookResult.Continue;
+
+        if (attackerPlayer.IsFakeClient || victimPlayer.IsFakeClient)
             return HookResult.Continue;
 
         if (attackerPlayer.PlayerPawn == null || victimPlayer.PlayerPawn == null)
