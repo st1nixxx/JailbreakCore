@@ -134,7 +134,6 @@ public class Library(ISwiftlyCore _core)
                 {
                     pawn.ItemServices?.GiveItem<CBaseEntity>(pistol.Value);
                     pawn.ItemServices?.GiveItem<CBaseEntity>(weaponId);
-                    Core.MenusAPI.CloseMenuForPlayer(player.Player, menu);
                 });
             };
 

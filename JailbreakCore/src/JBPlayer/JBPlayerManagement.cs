@@ -11,7 +11,7 @@ public class JBPlayerManagement(ISwiftlyCore _core)
     private Dictionary<int, JBPlayer> JBPlayers = new();
     public JBPlayer GetOrCreate(IPlayer player)
     {
-        if (player == null || player.PlayerPawn == null || player.Pawn == null || player.Controller == null)
+        if (player == null || player.PlayerPawn == null || player.Pawn == null || player.Controller == null || player.IsFakeClient)
             throw new ArgumentException("Invalid IPlayer");
 
         if (!JBPlayers.TryGetValue(player.PlayerID, out JBPlayer? jbPlayer))

@@ -250,6 +250,7 @@ public class KnifeFight_Gravity_Day(ISwiftlyCore _core, IJailbreakApi _api, Libr
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient) continue;
             var jbPlayer = Api.Players.GetPlayer(player);
             if (jbPlayer == null)
                 continue;
@@ -378,6 +379,7 @@ public class KnifeFight_Speed_Day(ISwiftlyCore _core, IJailbreakApi _api, Librar
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient) continue;
             var jbPlayer = Api.Players.GetPlayer(player);
             if (jbPlayer == null)
                 continue;
@@ -506,6 +508,7 @@ public class KnifeFight_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _lib
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient) continue;
             var jbPlayer = Api.Players.GetPlayer(player);
             if (jbPlayer == null)
                 continue;
@@ -621,6 +624,7 @@ public class HideAndSeek_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _li
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient) continue;
             var jbPlayer = Api.Players.GetPlayer(player);
             if (jbPlayer == null)
                 continue;
@@ -647,9 +651,9 @@ public class HideAndSeek_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _li
             }
             else
             {
-                List<IPlayer> terrorists = Core.PlayerManager.GetAllPlayers().Where(p => p.Controller.TeamNum == (int)Team.T).ToList();
+                List<IPlayer> terrorists = Core.PlayerManager.GetAllPlayers().Where(p => p.Controller.TeamNum == (int)Team.T && !p.IsFakeClient).ToList();
 
-                List<IPlayer> cts = Core.PlayerManager.GetAllPlayers().Where(p => p.Controller.TeamNum == (int)Team.CT).ToList();
+                List<IPlayer> cts = Core.PlayerManager.GetAllPlayers().Where(p => p.Controller.TeamNum == (int)Team.CT && !p.IsFakeClient).ToList();
 
                 foreach (var t in terrorists)
                 {
@@ -705,7 +709,7 @@ public class HideAndSeek_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _li
 
         Core.Event.OnItemServicesCanAcquireHook -= CanAcquireFunc;
 
-        foreach (var terrorist in Core.PlayerManager.GetAllPlayers().Where(t => t.Controller.TeamNum == (int)Team.T))
+        foreach (var terrorist in Core.PlayerManager.GetAllPlayers().Where(t => t.Controller.TeamNum == (int)Team.T && !t.IsFakeClient))
         {
             IJBPlayer? prisoner = Api.Players.GetPlayer(terrorist);
             if (prisoner != null)
@@ -772,6 +776,7 @@ public class HeadshotOnly_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _l
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient) continue;
             var jbPlayer = Api.Players.GetPlayer(player);
             if (jbPlayer == null)
                 continue;
@@ -904,6 +909,7 @@ public class OneInTheChamber_Day(ISwiftlyCore _core, IJailbreakApi _api, Library
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient) continue;
             var jbPlayer = Api.Players.GetPlayer(player);
             if (jbPlayer == null)
                 continue;
@@ -959,6 +965,9 @@ public class OneInTheChamber_Day(ISwiftlyCore _core, IJailbreakApi _api, Library
     {
         IPlayer attacker = Core.PlayerManager.GetPlayer(@event.Attacker);
         if (attacker == null)
+            return HookResult.Continue;
+
+        if (attacker.IsFakeClient || attacker.PlayerPawn == null)
             return HookResult.Continue;
 
         IJBPlayer? jbAttacer = Api.Players.GetPlayer(attacker);
@@ -1062,6 +1071,7 @@ public class NoScope_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _librar
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient) continue;
             var jbPlayer = Api.Players.GetPlayer(player);
             if (jbPlayer == null)
                 continue;
@@ -1102,6 +1112,7 @@ public class NoScope_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _librar
     {
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient) continue;
             var activeWeapon = player.PlayerPawn?.WeaponServices?.ActiveWeapon.Value;
             if (activeWeapon == null)
                 return;
@@ -1147,6 +1158,7 @@ public class NoScope_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _librar
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient) continue;
             var jbPlayer = Api.Players.GetPlayer(player);
             if (jbPlayer == null)
                 continue;
@@ -1211,6 +1223,12 @@ public class Teleport_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _libra
         IPlayer attackerPlayer = Core.PlayerManager.GetPlayer(@event.Attacker);
 
         if (victimPlayer == null || attackerPlayer == null || victimPlayer == attackerPlayer)
+            return HookResult.Continue;
+
+        if (victimPlayer.IsFakeClient || attackerPlayer.IsFakeClient)
+            return HookResult.Continue;
+
+        if (victimPlayer.PlayerPawn == null || attackerPlayer.PlayerPawn == null)
             return HookResult.Continue;
 
         var jbVictim = Api.Players.GetPlayer(victimPlayer);
