@@ -30,35 +30,5 @@
         "other": true,
         "comments": false,
         "strings": false
-    },
-    "editor.suggest.localityBonus": true,
-    "omnisharp.enableRoslynAnalyzers": false,
-    "editor.fontFamily": "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, 'Courier New', monospace",
-    "editor.fontLigatures": true,
-    "editor.tokenColorCustomizations": {
-        "textMateRules": [
-            {
-                "scope": [
-                    "keyword",
-                    "storage",
-                    "entity.name.function",
-                    "entity.name.class",
-                    "entity.name.type",
-                    "support.type",
-                    "support.class"
-                ],
-                "settings": {
-                    "fontStyle": "bold"
-                }
-            }
-        ]
-    },
-    "workbench.colorCustomizations": {
-        "titleBar.activeBackground": "#2a0000",
-        "activityBar.background": "#2a0000",
-        "sideBar.background": "#2a0000",
-        "statusBar.background": "#2a0000",
-        "editorGroupHeader.tabsBackground": "#2a0000",
-        "panel.background": "#2a0000"
     }
 }
