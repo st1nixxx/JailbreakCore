@@ -429,7 +429,7 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerSpawned(EventPlayerSpawned @event)
     {
         IPlayer player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
         JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
