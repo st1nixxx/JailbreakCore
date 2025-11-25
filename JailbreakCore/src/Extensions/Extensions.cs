@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using AudioApi;
 using Jailbreak.Shared;
 using Microsoft.Extensions.Logging;
 using SwiftlyS2.Shared;
@@ -269,6 +270,7 @@ public class Extensions(ISwiftlyCore core)
 
         foreach (var jbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
         {
+            jbPlayer.HasBox = state;
             if (!string.IsNullOrEmpty(callerName))
             {
                 jbPlayer.Print(IHud.Chat, "box_toggled", null, 0, true, IPrefix.JB, callerName, boxState);
@@ -279,9 +281,99 @@ public class Extensions(ISwiftlyCore core)
             }
         }
     }
+
+    public void GiveBox(JBPlayer targetPlayer, string callerName = "")
+    {
+        if (targetPlayer == null || !targetPlayer.IsValid)
+            return;
+
+        targetPlayer.HasBox = true;
+
+        foreach (var jbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+        {
+            if (!string.IsNullOrEmpty(callerName))
+            {
+                jbPlayer.Print(IHud.Chat, "box_given", null, 0, true, IPrefix.JB, callerName, targetPlayer.Controller.PlayerName);
+            }
+        }
+    }
+
+    public void RemoveBox(JBPlayer targetPlayer, string callerName = "")
+    {
+        if (targetPlayer == null || !targetPlayer.IsValid)
+            return;
+
+        targetPlayer.HasBox = false;
+
+        foreach (var jbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+        {
+            if (!string.IsNullOrEmpty(callerName))
+            {
+                jbPlayer.Print(IHud.Chat, "box_removed", null, 0, true, IPrefix.JB, callerName, targetPlayer.Controller.PlayerName);
+            }
+        }
+    }
+
+    public void ToggleMicrophone(bool state, string callerName = "")
+    {
+        string micState = state ? $" {Helper.ChatColors.Green}ON{Helper.ChatColors.Default}" : $" {Helper.ChatColors.Red}OFF{Helper.ChatColors.Default}";
+
+        foreach (var jbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+        {
+            // Skip warden - warden should always have microphone
+            if (jbPlayer.IsWarden)
+                continue;
+
+            // Only affect prisoners (Team.T = 2)
+            if (jbPlayer.Controller.TeamNum == 2)
+            {
+                jbPlayer.HasMicrophone = state;
+                jbPlayer.Player.VoiceFlags = state ? VoiceFlagValue.ListenAll : VoiceFlagValue.Muted;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(callerName))
+        {
+            PrintToChatAll("mic_toggled", true, IPrefix.JB, callerName, micState);
+        }
+    }
+
+    public void GiveMicrophone(JBPlayer targetPlayer, string callerName = "")
+    {
+        if (targetPlayer == null || !targetPlayer.IsValid)
+            return;
+
+        targetPlayer.HasMicrophone = true;
+        // Use Normal flag to allow team-based voice, or ListenAll to allow all players to hear
+        targetPlayer.Player.VoiceFlags = VoiceFlagValue.ListenAll;
+
+        if (!string.IsNullOrEmpty(callerName))
+        {
+            PrintToChatAll("mic_given", true, IPrefix.JB, callerName, targetPlayer.Controller.PlayerName);
+        }
+    }
+
+    public void RemoveMicrophone(JBPlayer targetPlayer, string callerName = "")
+    {
+        if (targetPlayer == null || !targetPlayer.IsValid)
+            return;
+
+        // Don't remove microphone from warden
+        if (targetPlayer.IsWarden)
+            return;
+
+        targetPlayer.HasMicrophone = false;
+        targetPlayer.Player.VoiceFlags = VoiceFlagValue.Muted;
+
+        if (!string.IsNullOrEmpty(callerName))
+        {
+            PrintToChatAll("mic_removed", true, IPrefix.JB, callerName, targetPlayer.Controller.PlayerName);
+        }
+    }
+
     public HookResult OnBoxActive(CTakeDamageInfo info, JBPlayer attacker, JBPlayer victim)
     {
-        if (JailbreakCore.g_IsBoxActive && attacker.Controller.TeamNum == victim.Controller.TeamNum && victim.Controller.TeamNum != (int)Team.T)
+        if ((JailbreakCore.g_IsBoxActive || attacker.HasBox || victim.HasBox) && attacker.Controller.TeamNum == victim.Controller.TeamNum && victim.Controller.TeamNum != (int)Team.T)
         {
             info.Damage = 0;
             return HookResult.Handled;
@@ -371,6 +463,109 @@ public class Extensions(ISwiftlyCore core)
         _Core.Engine.ExecuteCommand($"sv_enablebunnyhopping {bhState}");
 
         PrintToChatAll("bh_toggled", true, IPrefix.JB, isEnabled);
+    }
+
+    public void PlayCountdown(int seconds)
+    {
+        if (seconds != 5 && seconds != 10)
+        {
+            _Core.Logger.LogWarning($"Invalid countdown duration: {seconds}. Only 5 or 10 seconds supported.");
+            return;
+        }
+
+        string soundPath;
+        float volume;
+
+        if (seconds == 5)
+        {
+            soundPath = JailbreakCore.Config.Sounds.Countdown5.Path;
+            volume = JailbreakCore.Config.Sounds.Countdown5.Volume;
+        }
+        else
+        {
+            soundPath = JailbreakCore.Config.Sounds.Countdown10.Path;
+            volume = JailbreakCore.Config.Sounds.Countdown10.Volume;
+        }
+        
+        if (string.IsNullOrEmpty(soundPath))
+        {
+            _Core.Logger.LogWarning($"Countdown{seconds} sound path is not configured.");
+            return;
+        }
+
+        _Core.Logger.LogInformation($"Playing countdown {seconds} seconds - Sound: {soundPath}, Volume: {volume}");
+
+        try
+        {
+            var fullPath = Path.Combine(_Core.PluginDataDirectory, soundPath);
+            
+            // Use a unique channel for countdown sounds
+            IAudioChannelController controller = JailbreakCore.Audio.UseChannel($"countdown_{seconds}");
+            IAudioSource source = JailbreakCore.Audio.DecodeFromFile(fullPath);
+
+            if (source == null)
+            {
+                _Core.Logger.LogWarning($"Failed to decode countdown audio file: {fullPath}");
+                return;
+            }
+
+            controller.SetSource(source);
+            controller.SetVolumeToAll(volume);
+            controller.PlayToAll();
+
+            _Core.Logger.LogInformation($"Countdown {seconds}s sound played to all players");
+        }
+        catch (Exception ex)
+        {
+            _Core.Logger.LogWarning(ex, $"Failed to play countdown sound: {soundPath}");
+        }
+
+        // Display visual countdown
+        DisplayCountdownTimer(seconds);
+    }
+
+    private void DisplayCountdownTimer(int startSeconds)
+    {
+        int remaining = startSeconds;
+        CancellationTokenSource? token = null;
+
+        token = _Core.Scheduler.RepeatBySeconds(1.0f, () =>
+        {
+            if (remaining > 0)
+            {
+                // Display the number in center
+                string countdownHtml = $"<font class='fontSize-l' color='#FFD700'>{remaining}</font>";
+                
+                foreach (var jbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+                {
+                    jbPlayer.Player.SendMessage(MessageType.CenterHTML, countdownHtml);
+                }
+                
+                remaining--;
+            }
+            else
+            {
+                // Display "GO!"
+                string goHtml = "<font class='fontSize-l' color='#00FF00'>GO!</font>";
+                
+                foreach (var jbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+                {
+                    jbPlayer.Player.SendMessage(MessageType.CenterHTML, goHtml);
+                }
+
+                // Clear the message after a short delay
+                _Core.Scheduler.DelayBySeconds(1.0f, () =>
+                {
+                    foreach (var jbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+                    {
+                        jbPlayer.Player.SendMessage(MessageType.CenterHTML, "");
+                    }
+                });
+
+                // Cancel the repeating timer
+                token?.Cancel();
+            }
+        });
     }
 
     #region Entity Management

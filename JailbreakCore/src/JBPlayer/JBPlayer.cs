@@ -1,6 +1,7 @@
 //using AudioApi;
 using AudioApi;
 using Jailbreak.Shared;
+using Microsoft.Extensions.Logging;
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.Players;
@@ -18,6 +19,8 @@ public class JBPlayer : IDisposable, IJBPlayer
     public bool IsWarden => Role == IJBRole.Warden;
     public bool IsRebel => Role == IJBRole.Rebel;
     public bool IsFreeday => Role == IJBRole.Freeday;
+    public bool HasBox { get; set; } = false;
+    public bool HasMicrophone { get; set; } = true;
     public bool IsValid => Controller.IsValid && PlayerPawn.IsValid && Player.IsValid && Pawn.IsValid;
     public string WardenModel => JailbreakCore.Config.Models.Warden;
     public string GuardianModel => JailbreakCore.Config.Models.Guardian;
@@ -38,6 +41,10 @@ public class JBPlayer : IDisposable, IJBPlayer
         {
             SetRole(IJBRole.Warden);
             // ConfigureWarden(); // Disabled - causes native crash in RenderModeUpdated()
+
+            // Ensure warden always has microphone enabled
+            HasMicrophone = true;
+            Player.VoiceFlags = VoiceFlagValue.ListenAll;
 
             if (!Controller.IsHLTV && IsValid)
             {
@@ -154,6 +161,12 @@ public class JBPlayer : IDisposable, IJBPlayer
             {
                 if (!string.IsNullOrEmpty(PrisonerModel))
                     PlayerPawn.SetModel(PrisonerModel);
+                
+                // Remove all weapons from prisoners (make them unarmed)
+                if (PlayerPawn.ItemServices != null)
+                {
+                    PlayerPawn.ItemServices.RemoveItems();
+                }
             }
             else if (Role == IJBRole.Guardian)
             {
@@ -382,12 +395,27 @@ public class JBPlayer : IDisposable, IJBPlayer
     }
     public void PlaySound(string mp3path, float volume)
     {
-        IAudioChannelController controller = JailbreakCore.Audio.UseChannel("jailbreak_core");
-        IAudioSource source = JailbreakCore.Audio.DecodeFromFile(Path.Combine(_Core.PluginDataDirectory, mp3path));
+        try
+        {
+            var fullPath = Path.Combine(_Core.PluginDataDirectory, mp3path);
 
-        controller.SetSource(source);
-        controller.SetVolume(Player.PlayerID, volume);
-        controller.Play(Player.PlayerID);
+            IAudioChannelController controller = JailbreakCore.Audio.UseChannel($"jailbreak_player_{Player.PlayerID}");
+            IAudioSource source = JailbreakCore.Audio.DecodeFromFile(fullPath);
+
+            if (source == null)
+            {
+                _Core.Logger.LogWarning($"Failed to decode audio file: {fullPath}");
+                return;
+            }
+
+            controller.SetSource(source);
+            controller.SetVolume(Player.PlayerID, volume);
+            controller.Play(Player.PlayerID);
+        }
+        catch (Exception ex)
+        {
+            _Core.Logger.LogWarning(ex, $"Error playing sound {mp3path} for player {Controller.PlayerName}");
+        }
     }
     public void Dispose()
     {

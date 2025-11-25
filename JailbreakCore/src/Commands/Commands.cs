@@ -278,7 +278,9 @@ public class Commands(ISwiftlyCore core)
             return;
         }
 
-        if (JailbreakCore.SpecialDay.GetActiveDay() != null || JailbreakCore.LastRequest.GetActiveRequest() != null)
+        // Allow warden menu access during games (so warden can stop games)
+        // Only prevent during Last Request
+        if (JailbreakCore.LastRequest.GetActiveRequest() != null)
             return;
 
         JailbreakCore.WardenMenu.Display(jbPlayer);

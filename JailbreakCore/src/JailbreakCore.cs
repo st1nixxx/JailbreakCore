@@ -26,6 +26,7 @@ public partial class JailbreakCore : BasePlugin
     public static JBPlayerManagement JBPlayerManagement = null!;
     public static LastRequest LastRequest = null!;
     public static SpecialDay SpecialDay = null!;
+    public static DayCycle DayCycle = null!;
     public static WardenMenu WardenMenu = null!;
     public static SDMenu SDMenu = null!;
     public static LRMenu LRMenu = null!;
@@ -77,6 +78,7 @@ public partial class JailbreakCore : BasePlugin
                 .AddSingleton<JBPlayerManagement>()
                 .AddSingleton<LastRequest>()
                 .AddSingleton<SpecialDay>()
+                .AddSingleton<DayCycle>()
                 .AddSingleton<Commands>()
                 .AddSingleton<Hooks>()
                 .AddSingleton<WardenMenu>()
@@ -93,6 +95,7 @@ public partial class JailbreakCore : BasePlugin
         JBPlayerManagement = _provider.GetRequiredService<JBPlayerManagement>();
         LastRequest = _provider.GetRequiredService<LastRequest>();
         SpecialDay = _provider.GetRequiredService<SpecialDay>();
+        DayCycle = _provider.GetRequiredService<DayCycle>();
         Hooks = _provider.GetRequiredService<Hooks>();
         WardenMenu = _provider.GetRequiredService<WardenMenu>();
         SDMenu = _provider.GetRequiredService<SDMenu>();
@@ -181,7 +184,7 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerConnectFull(EventPlayerConnectFull @event)
     {
         var player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
         var jbPlayer = JBPlayerManagement.GetOrCreate(player); // create the JBPlayer before just in case.
@@ -192,7 +195,7 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerTeam(EventPlayerTeam @event)
     {
         IPlayer player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
         JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
@@ -204,7 +207,7 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerDisconnect(EventPlayerDisconnect @event)
     {
         IPlayer player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
         var jbPlayer = JBPlayerManagement.GetOrCreate(player);
@@ -258,6 +261,7 @@ public partial class JailbreakCore : BasePlugin
 
         Extensions.ToggleBox(false);
         SpecialDay.OnRoundStart();
+        DayCycle.OnRoundStart();
 
         Extensions.ToggleBunnyhoop(false);
 
@@ -314,9 +318,18 @@ public partial class JailbreakCore : BasePlugin
 
         Core.Scheduler.NextTick(() =>
         {
+            // Remove all weapons from prisoners at round start
+            foreach (var player in Core.PlayerManager.GetAllPlayers().Where(p => p.Controller.TeamNum == 2 && !p.IsFakeClient))
+            {
+                if (player.PlayerPawn != null && player.PlayerPawn.ItemServices != null)
+                {
+                    player.PlayerPawn.ItemServices.RemoveItems();
+                }
+            }
+
             if (Config.Prisoner.PrisonerMuteDuration > 1)
             {
-                foreach (var player in Core.PlayerManager.GetAllPlayers().Where(p => p.Controller.TeamNum == (int)Team.T))
+                foreach (var player in Core.PlayerManager.GetAllPlayers().Where(p => p.Controller.TeamNum == (int)Team.T && !p.IsFakeClient))
                 {
                     player.VoiceFlags = VoiceFlagValue.Muted;
                     JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
@@ -335,9 +348,10 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventRoundEnd(EventRoundEnd @event)
     {
         SpecialDay.OnRoundEnd();
+        DayCycle.OnRoundEnd();
         LastRequest.EndRequest(null, null);
 
-        foreach (var player in Core.PlayerManager.GetAllPlayers())
+        foreach (var player in Core.PlayerManager.GetAllPlayers().Where(p => !p.IsFakeClient))
         {
             JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
             if (Config.Prisoner.UnmutePrisonerOnRoundEnd && player.VoiceFlags == VoiceFlagValue.Muted)
@@ -429,7 +443,7 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerSpawned(EventPlayerSpawned @event)
     {
         IPlayer player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
         JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);

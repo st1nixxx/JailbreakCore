@@ -57,6 +57,12 @@ public class Library(ISwiftlyCore _core)
 
     public void ShowGunsMenu(IJBPlayer player)
     {
+        // Remove weapons first
+        if (player.Pawn != null && player.Pawn.ItemServices != null)
+        {
+            player.Pawn.ItemServices.RemoveItems();
+        }
+
         var config = new MenuConfiguration
         {
             Title = Core.Translation.GetPlayerLocalizer(player.Player)["guns_menu<title>"],
@@ -127,14 +133,21 @@ public class Library(ISwiftlyCore _core)
             var button = new ButtonMenuOption(pistol.Key);
             button.Click += async (sender, args) =>
             {
-                var pawn = player.Pawn;
-                pawn.ItemServices?.RemoveItems();
-
-                Core.Scheduler.NextTick(() =>
+                // Get fresh player reference to avoid stale pawn
+                var freshPlayer = Core.PlayerManager.GetPlayer(player.Player.PlayerID);
+                if (freshPlayer != null && freshPlayer.PlayerPawn != null)
                 {
-                    pawn.ItemServices?.GiveItem<CBaseEntity>(pistol.Value);
-                    pawn.ItemServices?.GiveItem<CBaseEntity>(weaponId);
-                });
+                    freshPlayer.PlayerPawn.ItemServices?.RemoveItems();
+
+                    Core.Scheduler.NextTick(() =>
+                    {
+                        if (freshPlayer.PlayerPawn != null && freshPlayer.PlayerPawn.ItemServices != null)
+                        {
+                            freshPlayer.PlayerPawn.ItemServices.GiveItem<CBaseEntity>(pistol.Value);
+                            freshPlayer.PlayerPawn.ItemServices.GiveItem<CBaseEntity>(weaponId);
+                        }
+                    });
+                }
             };
 
             menu.AddOption(button);

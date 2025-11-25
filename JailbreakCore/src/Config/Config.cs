@@ -23,6 +23,8 @@ public class SoundsConfig
     public WardenRemoved_Sound WardenRemoved { get; set; } = new();
     public Rebel_Sound Rebel { get; set; } = new();
     public Box_Sound Box { get; set; } = new();
+    public Countdown5_Sound Countdown5 { get; set; } = new();
+    public Countdown10_Sound Countdown10 { get; set; } = new();
 }
 public class WardenCommands
 {
@@ -87,6 +89,16 @@ public class Rebel_Sound
 public class Box_Sound
 {
     public string Path { get; set; } = "box.mp3";
+    public float Volume { get; set; } = 0.5f;
+}
+public class Countdown5_Sound
+{
+    public string Path { get; set; } = "countdown5.mp3";
+    public float Volume { get; set; } = 0.5f;
+}
+public class Countdown10_Sound
+{
+    public string Path { get; set; } = "countdown10.mp3";
     public float Volume { get; set; } = 0.5f;
 }
 public class Bunnyhoop_Config

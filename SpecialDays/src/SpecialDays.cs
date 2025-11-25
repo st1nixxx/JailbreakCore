@@ -275,8 +275,7 @@ public class KnifeFight_Gravity_Day(ISwiftlyCore _core, IJailbreakApi _api, Libr
             }
             else
             {
-
-                Core.PlayerManager.SendMessage(MessageType.CenterHTML, "");
+                Core.PlayerManager.SendMessage(MessageType.CenterHTML, Core.Localizer["prefix"] + Core.Localizer["game_started_message"]);
                 token?.Cancel();
                 token = null;
                 g_IsTimerActive = false;
@@ -404,8 +403,7 @@ public class KnifeFight_Speed_Day(ISwiftlyCore _core, IJailbreakApi _api, Librar
             }
             else
             {
-
-                Core.PlayerManager.SendMessage(MessageType.CenterHTML, "");
+                Core.PlayerManager.SendMessage(MessageType.CenterHTML, Core.Localizer["prefix"] + Core.Localizer["game_started_message"]);
                 token?.Cancel();
                 token = null;
                 g_IsTimerActive = false;
@@ -531,7 +529,7 @@ public class KnifeFight_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _lib
             }
             else
             {
-                Core.PlayerManager.SendMessage(MessageType.CenterHTML, "");
+                Core.PlayerManager.SendMessage(MessageType.CenterHTML, Core.Localizer["prefix"] + Core.Localizer["game_started_message"]);
                 token?.Cancel();
                 token = null;
                 g_IsTimerActive = false;
@@ -800,7 +798,7 @@ public class HeadshotOnly_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _l
             }
             else
             {
-                Core.PlayerManager.SendMessage(MessageType.CenterHTML, "");
+                Core.PlayerManager.SendMessage(MessageType.CenterHTML, Core.Localizer["prefix"] + Core.Localizer["game_started_message"]);
                 token?.Cancel();
                 token = null;
                 g_IsTimerActive = false;
@@ -941,7 +939,7 @@ public class OneInTheChamber_Day(ISwiftlyCore _core, IJailbreakApi _api, Library
             }
             else
             {
-                Core.PlayerManager.SendMessage(MessageType.CenterHTML, "");
+                Core.PlayerManager.SendMessage(MessageType.CenterHTML, Core.Localizer["prefix"] + Core.Localizer["game_started_message"]);
                 token?.Cancel();
                 token = null;
                 g_IsTimerActive = false;
@@ -1098,7 +1096,7 @@ public class NoScope_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _librar
             }
             else
             {
-                Core.PlayerManager.SendMessage(MessageType.CenterHTML, "");
+                Core.PlayerManager.SendMessage(MessageType.CenterHTML, Core.Localizer["prefix"] + Core.Localizer["game_started_message"]);
                 token?.Cancel();
                 token = null;
                 g_IsTimerActive = false;
@@ -1210,6 +1208,7 @@ public class Teleport_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _libra
             }
             else
             {
+                Core.PlayerManager.SendMessage(MessageType.Chat, Core.Localizer["prefix"] + Core.Localizer["game_started_message"]);
                 token?.Cancel();
                 token = null;
                 g_IsTimerActive = false;
@@ -1292,12 +1291,17 @@ public class FFA_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _library) :
         Api.Utilities.ToggleCells(true, "");
 
         Core.Engine.ExecuteCommand($"sv_teamid_overhead 0");
-        foreach (var player in Core.PlayerManager.GetAllPlayers())
+        
+        // Delay showing menu slightly to ensure weapons are removed
+        Core.Scheduler.DelayBySeconds(0.5f, () =>
         {
-            var jbPlayer = Api.Players.GetPlayer(player);
-            if (jbPlayer != null)
-                Library.ShowGunsMenu(jbPlayer);
-        }
+            foreach (var player in Core.PlayerManager.GetAllPlayers())
+            {
+                var jbPlayer = Api.Players.GetPlayer(player);
+                if (jbPlayer != null && !player.IsFakeClient)
+                    Library.ShowGunsMenu(jbPlayer);
+            }
+        });
 
         token = Core.Scheduler.RepeatBySeconds(1.0f, () =>
         {
@@ -1309,6 +1313,7 @@ public class FFA_Day(ISwiftlyCore _core, IJailbreakApi _api, Library _library) :
             }
             else
             {
+                Core.PlayerManager.SendMessage(MessageType.Chat, Core.Localizer["prefix"] + Core.Localizer["game_started_message"]);
                 token?.Cancel();
                 token = null;
                 g_IsTimerActive = false;

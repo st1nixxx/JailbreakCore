@@ -20,5 +20,6 @@
   "knife_fight_speed_day<description>": "Everybody uses their knife! High speed enabled!",
   "guns_menu<title>": "Select Rifle",
   "pistol_menu<title>": "Select Pistol",
-  "day_starting": "[yellow]{0}[default] day starts in [red]{1}[default] seconds"
+  "day_starting": "[yellow]{0}[default] day starts in [red]{1}[default] seconds",
+  "game_started_message": "Game started."
 }

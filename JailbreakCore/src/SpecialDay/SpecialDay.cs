@@ -6,59 +6,94 @@ namespace JailbreakCore;
 
 public class SpecialDay
 {
-    private readonly List<ISpecialDay> Days = new();
-    private ISpecialDay? ActiveDay;
-    private ISpecialDay? PendingDay;
-    private int CooldownInRounds = JailbreakCore.Config.SpecialDay.CooldownInRounds;
-    public IReadOnlyList<ISpecialDay> GetAllDays() => Days;
-    public ISpecialDay? GetActiveDay() => ActiveDay;
+    private readonly List<ISpecialDay> Games = new();
+    private ISpecialDay? ActiveGame;
+    
+    public IReadOnlyList<ISpecialDay> GetAllDays() => Games;
+    public ISpecialDay? GetActiveDay() => ActiveGame;
+    public bool IsGameActive() => ActiveGame != null;
 
     public void Register(ISpecialDay day)
     {
-        Days.Add(day);
+        Games.Add(day);
     }
     public void Unregister(ISpecialDay day)
     {
-        Days.Remove(day);
+        Games.Remove(day);
     }
     public void Select(JBPlayer player, string name)
     {
-        if (CooldownInRounds > 0)
+        // Check if a game is already active
+        if (ActiveGame != null)
         {
-            player.Print(IHud.Chat, "day_on_cooldown", null, showPrefix: true, prefixType: IPrefix.SD, args: new object[] { CooldownInRounds });
+            player.Print(IHud.Chat, "game_already_active", null, 0, true, IPrefix.SD, ActiveGame.Name);
             return;
         }
 
-        PendingDay = Days.FirstOrDefault(d => d.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        var selectedGame = Games.FirstOrDefault(d => d.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
-        if (PendingDay != null)
-            JailbreakCore.Extensions.PrintToChatAll("special_day_pending", true, IPrefix.SD, player.Controller.PlayerName, PendingDay.Name);
-
-    }
-    public void OnRoundStart()
-    {
-        if (CooldownInRounds > 0)
-            CooldownInRounds--;
-
-        if (PendingDay != null)
+        if (selectedGame != null)
         {
-            ActiveDay = PendingDay;
-            PendingDay = null;
-
-            ActiveDay.Start();
-            JailbreakCore.Extensions.PrintToChatAll(ActiveDay.Description, showPrefix: true, prefixType: IPrefix.SD);
-
-            CooldownInRounds = JailbreakCore.Config.SpecialDay.CooldownInRounds;
+            // Start game instantly
+            ActiveGame = selectedGame;
+            
+            // Remove all weapons from players first
+            RemoveAllWeapons();
+            
+            // Start the game
+            ActiveGame.Start();
+            JailbreakCore.Extensions.PrintToChatAll("game_started", true, IPrefix.SD, player.Controller.PlayerName, ActiveGame.Name);
         }
     }
+
+    public void StopGame(JBPlayer player)
+    {
+        if (ActiveGame == null)
+        {
+            player.Print(IHud.Chat, "no_active_game", null, 0, true, IPrefix.SD);
+            return;
+        }
+
+        string gameName = ActiveGame.Name;
+        ActiveGame.End();
+        ActiveGame = null;
+
+        JailbreakCore.Extensions.PrintToChatAll("game_stopped", true, IPrefix.SD, player.Controller.PlayerName, gameName);
+    }
+
+    private void RemoveAllWeapons()
+    {
+        foreach (var jbPlayer in JailbreakCore.JBPlayerManagement.GetAllPlayers())
+        {
+            if (jbPlayer.PlayerPawn.IsValid && jbPlayer.PlayerPawn.ItemServices != null)
+            {
+                jbPlayer.PlayerPawn.ItemServices.RemoveItems();
+            }
+        }
+    }
+
+    public void OnRoundStart()
+    {
+        // Games persist across rounds unless manually stopped
+        // No auto-start on round start
+    }
+    
     public void OnRoundEnd()
     {
-        ActiveDay?.End();
-        ActiveDay = null;
+        // Stop game on round end
+        if (ActiveGame != null)
+        {
+            ActiveGame.End();
+            ActiveGame = null;
+        }
     }
+    
     public void EndDay()
     {
-        ActiveDay?.End();
-        ActiveDay = null;
+        if (ActiveGame != null)
+        {
+            ActiveGame.End();
+            ActiveGame = null;
+        }
     }
 }
