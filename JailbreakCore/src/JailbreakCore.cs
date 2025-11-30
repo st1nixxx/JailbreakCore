@@ -449,6 +449,21 @@ public partial class JailbreakCore : BasePlugin
 
         return HookResult.Continue;
     }
+
+    [GameEventHandler(HookMode.Post)]
+    public HookResult OnStartupServer(EventServerStartup @event)
+    {
+        Logger.LogInformation("JBCore: Server startup complete - starting stuffs...");
+        
+        // check all system is ready
+        Task.Delay(1000).ContinueWith(_ => 
+        {
+            Logger.LogInformation("JBCore: All systems initialized and ready");
+        });
+        
+        return HookResult.Continue;
+    }
+
     [GameEventHandler(HookMode.Post)]
     public HookResult EventPlayerSpawned(EventPlayerSpawned @event)
     {

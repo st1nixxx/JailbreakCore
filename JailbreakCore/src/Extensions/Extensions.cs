@@ -357,6 +357,43 @@ public class Extensions(ISwiftlyCore core)
 
         return menu;
     }
+    
+    /// <summary>
+    /// new critical menu that cannot be accidentally exited (v1.0.3 featt)
+    /// </summary>
+    public IMenuAPI CreateCriticalMenu(string title, IMenuAPI? parent = null)
+    {
+        var config = new MenuConfiguration
+        {
+            Title = title,
+            HideTitle = false,
+            HideFooter = false,
+            PlaySound = true,
+            MaxVisibleItems = 5,
+            AutoIncreaseVisibleItems = true,
+            FreezePlayer = false,
+            DisableExit = true, // prevents accidental menu closing
+        };
+
+        var keyBinds = new MenuKeybindOverrides
+        {
+            Select = KeyBind.E,
+            Move = KeyBind.S,
+            MoveBack = KeyBind.W,
+            Exit = KeyBind.Tab // still bound but disabled by DisableExit
+        };
+
+        var menu = _Core.MenusAPI.CreateMenu(
+            configuration: config,
+            keybindOverrides: keyBinds,
+            parent: parent ?? null,
+            optionScrollStyle: MenuOptionScrollStyle.CenterFixed,
+            optionTextStyle: MenuOptionTextStyle.TruncateEnd
+        );
+
+        return menu;
+    }
+    
     public void ToggleBunnyhoop(bool state)
     {
         int value = state ? 1 : 0;
@@ -371,6 +408,27 @@ public class Extensions(ISwiftlyCore core)
         _Core.Engine.ExecuteCommand($"sv_enablebunnyhopping {bhState}");
 
         PrintToChatAll("bh_toggled", true, IPrefix.JB, isEnabled);
+    }
+    
+    /// <summary>
+    /// check if warden has line of sight to target player (1.0.3 fett)
+    /// </summary>
+    public static bool WardenHasLineOfSight(IJBPlayer warden, IJBPlayer target)
+    {
+        if (warden?.Pawn == null || target?.Pawn == null) return false;
+        
+        try
+        {
+            // new haslineofsight functionality from 1.0.3
+            return _Core.TraceManager.HasLineOfSight(
+                warden.Pawn.AbsOrigin ?? new Vector3(0, 0, 0), 
+                target.Pawn.AbsOrigin ?? new Vector3(0, 0, 0)
+            );
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     #region Entity Management
