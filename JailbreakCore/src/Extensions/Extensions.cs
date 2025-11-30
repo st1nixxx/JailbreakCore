@@ -411,19 +411,28 @@ public class Extensions(ISwiftlyCore core)
     }
     
     /// <summary>
-    /// check if warden has line of sight to target player (1.0.3 fett)
+    /// Check if warden has reasonable proximity to target player for enhanced targeting
+    /// Note: Simplified implementation until SwiftlyS2 1.0.3
     /// </summary>
-    public static bool WardenHasLineOfSight(IJBPlayer warden, IJBPlayer target)
+    public bool WardenHasLineOfSight(IJBPlayer warden, IJBPlayer target)
     {
         if (warden?.Pawn == null || target?.Pawn == null) return false;
         
         try
         {
-            // new haslineofsight functionality from 1.0.3
-            return _Core.TraceManager.HasLineOfSight(
-                warden.Pawn.AbsOrigin ?? new Vector3(0, 0, 0), 
-                target.Pawn.AbsOrigin ?? new Vector3(0, 0, 0)
-            );
+            var wardenPos = warden.Pawn.AbsOrigin;
+            var targetPos = target.Pawn.AbsOrigin;
+            
+            if (!wardenPos.HasValue || !targetPos.HasValue) return false;
+            
+            // Calculate distance between warden and target
+            var dx = wardenPos.Value.X - targetPos.Value.X;
+            var dy = wardenPos.Value.Y - targetPos.Value.Y;
+            var dz = wardenPos.Value.Z - targetPos.Value.Z;
+            var distance = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            
+            // Return true if within reasonable interaction distance (e.g., 1000 units)
+            return distance <= 1000.0;
         }
         catch
         {
