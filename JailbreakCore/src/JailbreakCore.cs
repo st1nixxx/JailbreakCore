@@ -181,10 +181,10 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerConnectFull(EventPlayerConnectFull @event)
     {
         var player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
-        var jbPlayer = JBPlayerManagement.GetOrCreate(player); // create the JBPlayer before just in case.
+        JBPlayerManagement.GetOrCreate(player); // create the JBPlayer before just in case.
 
         return HookResult.Continue;
     }
@@ -192,7 +192,7 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerTeam(EventPlayerTeam @event)
     {
         IPlayer player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
         JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
@@ -204,7 +204,7 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerDisconnect(EventPlayerDisconnect @event)
     {
         IPlayer player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
         var jbPlayer = JBPlayerManagement.GetOrCreate(player);
@@ -339,6 +339,9 @@ public partial class JailbreakCore : BasePlugin
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient)
+                continue;
+
             JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
             if (Config.Prisoner.UnmutePrisonerOnRoundEnd && player.VoiceFlags == VoiceFlagValue.Muted)
             {
