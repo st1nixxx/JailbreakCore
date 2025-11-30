@@ -13,7 +13,8 @@ public class WardenMenu(ISwiftlyCore _core, Extensions _extensions)
 
     public void Display(JBPlayer player)
     {
-        var menu = _Extensions.CreateMenu(_Core.Translation.GetPlayerLocalizer(player.Player)["warden_menu<title>"]);
+        // new critical menu for warden tools to prevent accidental closing (v1.0.3 feat)
+        var menu = _Extensions.CreateCriticalMenu(_Core.Translation.GetPlayerLocalizer(player.Player)["warden_menu<title>"]);
 
         var toggleCells = new ToggleMenuOption(_Core.Translation.GetPlayerLocalizer(player.Player)["toggle_cells<option>"]);
         toggleCells.Click += async (sender, args) =>
