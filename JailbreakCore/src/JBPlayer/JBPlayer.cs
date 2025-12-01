@@ -1,10 +1,9 @@
-//using AudioApi;
-using AudioApi;
 using Jailbreak.Shared;
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
+using SwiftlyS2.Shared.Sounds;
 
 namespace JailbreakCore;
 
@@ -138,8 +137,29 @@ public class JBPlayer : IDisposable, IJBPlayer
             Pawn.ItemServices?.RemoveItems();
         }
     }
+
+    // new thing xd spawn welcome message from 1.0.3
     public void OnPlayerSpawn()
     {
+        bool isFirstSpawn = Pawn?.IsFirstSpawn() ?? false;
+        
+        if (isFirstSpawn)
+        {
+            Logger.LogInformation($"first spawn for jbplayer {Controller.PlayerName}");
+            
+            Task.Delay(2000).ContinueWith(_ => 
+            {
+                if (Controller.TeamNum == (int)Team.T)
+                {
+                    Print(IHud.Chat, "jailbreak_welcome_prisoner");
+                }
+                else if (Controller.TeamNum == (int)Team.CT)
+                {
+                    Print(IHud.Chat, "jailbreak_welcome_guard");
+                }
+            });
+        }
+        
         if (Controller.TeamNum == (int)Team.T)
             SetRole(IJBRole.Prisoner);
         else if (Controller.TeamNum == (int)Team.CT)
@@ -380,14 +400,16 @@ public class JBPlayer : IDisposable, IJBPlayer
         });
         */
     }
-    public void PlaySound(string mp3path, float volume)
+    public void PlaySound(string sound, float volume)
     {
-        IAudioChannelController controller = JailbreakCore.Audio.UseChannel("jailbreak_core");
-        IAudioSource source = JailbreakCore.Audio.DecodeFromFile(Path.Combine(_Core.PluginDataDirectory, mp3path));
-
-        controller.SetSource(source);
-        controller.SetVolume(Player.PlayerID, volume);
-        controller.Play(Player.PlayerID);
+        var soundEvent = new SoundEvent()
+        {
+            Name = sound,
+            Volume = volume,
+            SourceEntityIndex = -1
+        };
+        soundEvent.Recipients.AddAllPlayers();
+        soundEvent.Emit();
     }
     public void Dispose()
     {

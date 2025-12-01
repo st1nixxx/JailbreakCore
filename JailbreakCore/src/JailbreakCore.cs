@@ -1,9 +1,8 @@
-//using AudioApi;
-using AudioApi;
 using Jailbreak;
 using Jailbreak.Shared;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Events;
@@ -13,7 +12,7 @@ using SwiftlyS2.Shared.Misc;
 using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.Plugins;
-using Tomlyn.Extensions.Configuration;
+using SwiftlyS2.Shared.SchemaDefinitions;
 
 namespace JailbreakCore;
 
@@ -32,7 +31,6 @@ public partial class JailbreakCore : BasePlugin
     public static SurrenderMenu SurrenderMenu = null!;
     public static HealMenu HealMenu = null!;
     public static Hooks Hooks = null!;
-    public static IAudioApi Audio = null!;
     public static JailbreakConfig Config { get; set; } = new JailbreakConfig();
 
     public static bool g_IsBoxActive = false;
@@ -54,7 +52,7 @@ public partial class JailbreakCore : BasePlugin
 
     public override void UseSharedInterface(IInterfaceManager interfaceManager)
     {
-        Audio = interfaceManager.GetSharedInterface<IAudioApi>("audio");
+
     }
     public override void Load(bool hotReload)
     {
@@ -116,6 +114,26 @@ public partial class JailbreakCore : BasePlugin
     }
 
     #region Events
+    [EventListener<EventDelegates.OnEntityTakeDamage>]
+    public void OnEntityTakeDamage(IOnEntityTakeDamageEvent @event)
+    {
+        CTakeDamageInfo info = @event.Info;
+
+        var attackerPlayer = Extensions.ResolvePlayerFromHandle(info.Attacker);
+        if (attackerPlayer == null || !attackerPlayer.IsValid)
+            return;
+
+        var jbAttacker = JBPlayerManagement.GetOrCreate(attackerPlayer);
+        if (!jbAttacker.IsWarden)
+            return;
+
+        var entity = @event.Entity;
+
+        if (entity.DesignerName.Contains("weapon"))
+        {
+            Core.Scheduler.NextWorldUpdate(() => entity.Despawn());
+        }
+    }
     [GameEventHandler(HookMode.Pre)]
     public HookResult EventPlayerDeath(EventPlayerDeath @event)
     {
@@ -184,8 +202,6 @@ public partial class JailbreakCore : BasePlugin
         if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
-        var jbPlayer = JBPlayerManagement.GetOrCreate(player); // create the JBPlayer before just in case.
-
         return HookResult.Continue;
     }
     [GameEventHandler(HookMode.Pre)]
@@ -223,7 +239,7 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerPing(EventPlayerPing @event)
     {
         IPlayer player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
         var jbPlayer = JBPlayerManagement.GetOrCreate(player);
@@ -339,6 +355,9 @@ public partial class JailbreakCore : BasePlugin
 
         foreach (var player in Core.PlayerManager.GetAllPlayers())
         {
+            if (player.IsFakeClient)
+                continue;
+
             JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
             if (Config.Prisoner.UnmutePrisonerOnRoundEnd && player.VoiceFlags == VoiceFlagValue.Muted)
             {
@@ -423,13 +442,33 @@ public partial class JailbreakCore : BasePlugin
             }
         }
 
+        if (jbPlayer.IsWarden)
+        {
+
+        }
+
         return HookResult.Continue;
     }
+
+    [GameEventHandler(HookMode.Post)]
+    public HookResult OnStartupServer(EventServerStartup @event)
+    {
+        Logger.LogInformation("JBCore: Server startup complete - starting stuffs...");
+        
+        // check all system is ready
+        Task.Delay(1000).ContinueWith(_ => 
+        {
+            Logger.LogInformation("JBCore: All systems initialized and ready");
+        });
+        
+        return HookResult.Continue;
+    }
+
     [GameEventHandler(HookMode.Post)]
     public HookResult EventPlayerSpawned(EventPlayerSpawned @event)
     {
         IPlayer player = @event.UserIdPlayer;
-        if (player == null || player.IsFakeClient)
+        if (player == null)
             return HookResult.Continue;
 
         JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
