@@ -138,28 +138,9 @@ public class JBPlayer : IDisposable, IJBPlayer
         }
     }
 
-    // new thing xd spawn welcome message from 1.0.3
+    // Enhanced spawn handling with proper team assignment
     public void OnPlayerSpawn()
     {
-        bool isFirstSpawn = Pawn?.IsFirstSpawn() ?? false;
-        
-        if (isFirstSpawn)
-        {
-            Logger.LogInformation($"first spawn for jbplayer {Controller.PlayerName}");
-            
-            Task.Delay(2000).ContinueWith(_ => 
-            {
-                if (Controller.TeamNum == (int)Team.T)
-                {
-                    Print(IHud.Chat, "jailbreak_welcome_prisoner");
-                }
-                else if (Controller.TeamNum == (int)Team.CT)
-                {
-                    Print(IHud.Chat, "jailbreak_welcome_guard");
-                }
-            });
-        }
-        
         if (Controller.TeamNum == (int)Team.T)
             SetRole(IJBRole.Prisoner);
         else if (Controller.TeamNum == (int)Team.CT)
