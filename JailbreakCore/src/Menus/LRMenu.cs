@@ -83,11 +83,13 @@ public class LRMenu(ISwiftlyCore _core, Extensions _extensions)
             var option = new ButtonMenuOption(displayName);
             option.Click += async (sender, args) =>
             {
-                request.SelectedWeaponName = displayName;
-                request.SelectedWeaponID = className;
+                _Core.Scheduler.NextTick(() =>
+                {
+                    request.SelectedWeaponName = displayName;
+                    request.SelectedWeaponID = className;
 
-                JailbreakCore.LastRequest.SelectRequest(request, guardian, prisoner, displayName, className);
-
+                    JailbreakCore.LastRequest.SelectRequest(request, guardian, prisoner, displayName, className);
+                });
             };
 
             menu.AddOption(option);

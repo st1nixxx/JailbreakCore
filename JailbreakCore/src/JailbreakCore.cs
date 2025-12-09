@@ -336,7 +336,7 @@ public partial class JailbreakCore : BasePlugin
         {
             if (Config.Prisoner.PrisonerMuteDuration > 1)
             {
-                foreach (var player in Core.PlayerManager.GetAllPlayers().Where(p => p.Controller.TeamNum == (int)Team.T))
+                foreach (var player in Core.PlayerManager.GetAllPlayers().Where(p => p.Controller.TeamNum == (int)Team.T && !p.IsFakeClient))
                 {
                     player.VoiceFlags = VoiceFlagValue.Muted;
                     JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
@@ -458,7 +458,7 @@ public partial class JailbreakCore : BasePlugin
     public HookResult EventPlayerSpawned(EventPlayerSpawned @event)
     {
         IPlayer player = @event.UserIdPlayer;
-        if (player == null)
+        if (player == null || player.IsFakeClient)
             return HookResult.Continue;
 
         JBPlayer jbPlayer = JBPlayerManagement.GetOrCreate(player);
@@ -468,7 +468,7 @@ public partial class JailbreakCore : BasePlugin
             _firstSpawnPlayers.Add(player.SteamID);
             
             // Welcome message for first-time spawns using v1.0.3 enhancements
-            Task.Delay(2000).ContinueWith(_ => 
+            Core.Scheduler.DelayBySeconds(2, () => 
             {
                 if (player.Controller.TeamNum == (int)Team.T)
                 {
