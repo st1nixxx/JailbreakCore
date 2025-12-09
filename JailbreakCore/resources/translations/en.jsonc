@@ -56,6 +56,8 @@
   "heal_refused": "[blue]Warden[default] refused your heal request.",
   "prisoner_unmuted_round_end": "All prisoners are unmuted until round start!",
   "prisoner_unmuted": "Every prisoner is muted for {0} seconds!",
-  "bh_toggled": "Bunnyhooping is now {0}!"
+  "bh_toggled": "Bunnyhooping is now {0}!",
+  "jailbreak_welcome_prisoner": "Welcome to Jailbreak! You are a [red]Prisoner[default]. Follow the [blue]Warden[default]'s orders to survive!",
+  "jailbreak_welcome_guard": "Welcome to Jailbreak! You are a [blue]Guard[default]. Help maintain order and protect the [blue]Warden[default]!"
 }
 

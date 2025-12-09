@@ -357,6 +357,43 @@ public class Extensions(ISwiftlyCore core)
 
         return menu;
     }
+    
+    /// <summary>
+    /// new critical menu that cannot be accidentally exited (v1.0.3 featt)
+    /// </summary>
+    public IMenuAPI CreateCriticalMenu(string title, IMenuAPI? parent = null)
+    {
+        var config = new MenuConfiguration
+        {
+            Title = title,
+            HideTitle = false,
+            HideFooter = false,
+            PlaySound = true,
+            MaxVisibleItems = 5,
+            AutoIncreaseVisibleItems = true,
+            FreezePlayer = false,
+            DisableExit = true, // prevents accidental menu closing
+        };
+
+        var keyBinds = new MenuKeybindOverrides
+        {
+            Select = KeyBind.E,
+            Move = KeyBind.S,
+            MoveBack = KeyBind.W,
+            Exit = KeyBind.Tab // still bound but disabled by DisableExit
+        };
+
+        var menu = _Core.MenusAPI.CreateMenu(
+            configuration: config,
+            keybindOverrides: keyBinds,
+            parent: parent ?? null,
+            optionScrollStyle: MenuOptionScrollStyle.CenterFixed,
+            optionTextStyle: MenuOptionTextStyle.TruncateEnd
+        );
+
+        return menu;
+    }
+    
     public void ToggleBunnyhoop(bool state)
     {
         int value = state ? 1 : 0;
@@ -371,6 +408,36 @@ public class Extensions(ISwiftlyCore core)
         _Core.Engine.ExecuteCommand($"sv_enablebunnyhopping {bhState}");
 
         PrintToChatAll("bh_toggled", true, IPrefix.JB, isEnabled);
+    }
+    
+    /// <summary>
+    /// Check if warden has reasonable proximity to target player for enhanced targeting
+    /// Note: Simplified implementation until SwiftlyS2 1.0.3
+    /// </summary>
+    public bool WardenHasLineOfSight(IJBPlayer warden, IJBPlayer target)
+    {
+        if (warden?.Pawn == null || target?.Pawn == null) return false;
+        
+        try
+        {
+            var wardenPos = warden.Pawn.AbsOrigin;
+            var targetPos = target.Pawn.AbsOrigin;
+            
+            if (!wardenPos.HasValue || !targetPos.HasValue) return false;
+            
+            // Calculate distance between warden and target
+            var dx = wardenPos.Value.X - targetPos.Value.X;
+            var dy = wardenPos.Value.Y - targetPos.Value.Y;
+            var dz = wardenPos.Value.Z - targetPos.Value.Z;
+            var distance = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            
+            // Return true if within reasonable interaction distance (e.g., 1000 units)
+            return distance <= 1000.0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     #region Entity Management
@@ -922,6 +989,25 @@ public class Extensions(ISwiftlyCore core)
             (int)Team.CT => Color.FromHex("#0000FFFF"),
             _ => Color.FromHex("#FFFFFFFF")
         };
+    }
+
+    public IPlayer? ResolvePlayerFromHandle(CHandle<CEntityInstance> handle)
+    {
+        if (!handle.IsValid)
+            return null;
+
+        var entity = handle.Value;
+        if (entity == null)
+            return null;
+
+        foreach (var player in _Core.PlayerManager.GetAllPlayers())
+        {
+            if (player.PlayerPawn?.Address == entity.Address ||
+                player.Controller?.Address == entity.Address)
+                return player;
+        }
+
+        return null;
     }
 
     #endregion

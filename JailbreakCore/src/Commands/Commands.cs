@@ -26,7 +26,15 @@ public class Commands(ISwiftlyCore core)
         {
             foreach (var alias in aliases)
             {
+                // check if command already exists (v1.0.3 feat)
+                if (_Core.Command.IsCommandRegistered(alias))
+                {
+                    _Core.Logger.LogWarning($"Command '{alias}' is already registered, skipping...");
+                    continue;
+                }
+                
                 _Core.Command.RegisterCommand(alias, handler);
+                _Core.Logger.LogInformation($"successfully registered prisoner command: {alias}");
             }
         }
     }
@@ -45,6 +53,13 @@ public class Commands(ISwiftlyCore core)
         {
             foreach (var alias in aliases)
             {
+                // Use new v1.0.3 feature to check if command already exists
+                if (_Core.Command.IsCommandRegistered(alias))
+                {
+                    _Core.Logger.LogWarning($"Command '{alias}' is already registered, skipping...");
+                    continue;
+                }
+                
                 _Core.Logger.LogInformation($"Registering {alias} command.");
                 _Core.Command.RegisterCommand(alias, handler);
             }

@@ -1,10 +1,9 @@
-//using AudioApi;
-using AudioApi;
 using Jailbreak.Shared;
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.Players;
 using SwiftlyS2.Shared.SchemaDefinitions;
+using SwiftlyS2.Shared.Sounds;
 
 namespace JailbreakCore;
 
@@ -138,6 +137,8 @@ public class JBPlayer : IDisposable, IJBPlayer
             Pawn.ItemServices?.RemoveItems();
         }
     }
+
+    // Enhanced spawn handling with proper team assignment
     public void OnPlayerSpawn()
     {
         if (Controller.TeamNum == (int)Team.T)
@@ -380,14 +381,16 @@ public class JBPlayer : IDisposable, IJBPlayer
         });
         */
     }
-    public void PlaySound(string mp3path, float volume)
+    public void PlaySound(string sound, float volume)
     {
-        IAudioChannelController controller = JailbreakCore.Audio.UseChannel("jailbreak_core");
-        IAudioSource source = JailbreakCore.Audio.DecodeFromFile(Path.Combine(_Core.PluginDataDirectory, mp3path));
-
-        controller.SetSource(source);
-        controller.SetVolume(Player.PlayerID, volume);
-        controller.Play(Player.PlayerID);
+        var soundEvent = new SoundEvent()
+        {
+            Name = sound,
+            Volume = volume,
+            SourceEntityIndex = -1
+        };
+        soundEvent.Recipients.AddAllPlayers();
+        soundEvent.Emit();
     }
     public void Dispose()
     {
