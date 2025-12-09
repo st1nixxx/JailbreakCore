@@ -20,14 +20,14 @@ public class WardenMenu(ISwiftlyCore _core, Extensions _extensions)
         toggleCells.Click += async (sender, args) =>
         {
             var isToggled = toggleCells.GetDisplayText(args.Player, 0).Contains("✔");
-            JailbreakCore.Extensions.ToggleCells(isToggled, args.Player.Controller.PlayerName);
+            _Core.Scheduler.NextTick(() => JailbreakCore.Extensions.ToggleCells(isToggled, args.Player.Controller.PlayerName));
         };
 
         var toggleBox = new ToggleMenuOption(_Core.Translation.GetPlayerLocalizer(player.Player)["toggle_box<option>"]);
         toggleBox.Click += async (sender, args) =>
         {
             var isToggled = toggleBox.GetDisplayText(args.Player, 0).Contains("✔");
-            JailbreakCore.Extensions.ToggleBox(isToggled, args.Player.Controller.PlayerName);
+            _Core.Scheduler.NextTick(() => JailbreakCore.Extensions.ToggleBox(isToggled, args.Player.Controller.PlayerName));
         };
 
         var freedaySubMenu = new SubmenuMenuOption(_Core.Translation.GetPlayerLocalizer(player.Player)["add_freeday<option>"], FreedayMenu(player, menu));
@@ -89,8 +89,11 @@ public class WardenMenu(ISwiftlyCore _core, Extensions _extensions)
             var option = new ButtonMenuOption(prisoner.Controller.PlayerName);
             option.Click += async (sender, args) =>
             {
-                prisoner.SetFreeday(true);
-                JailbreakCore.Extensions.PrintToChatAll("freeday_given", showPrefix: true, IPrefix.JB, prisoner.Controller.PlayerName);
+                _Core.Scheduler.NextTick(() =>
+                {
+                    prisoner.SetFreeday(true);
+                    JailbreakCore.Extensions.PrintToChatAll("freeday_given", showPrefix: true, IPrefix.JB, prisoner.Controller.PlayerName);
+                });
             };
 
             menu.AddOption(option);

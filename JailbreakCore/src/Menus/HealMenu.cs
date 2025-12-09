@@ -21,16 +21,22 @@ public class HealMenu(ISwiftlyCore _core, Extensions _extensions)
         var yesOption = new ButtonMenuOption(_Core.Translation.GetPlayerLocalizer(warden.Player)["accept<option>"]);
         yesOption.Click += async (sender, args) =>
         {
-            _Extensions.PrintToChatAll("heal_accepted", true, IPrefix.JB, prisoner.Controller.PlayerName);
-            prisoner.Pawn.ItemServices?.GiveItem<CBaseEntity>("weapon_healthshot");
-            _Core.MenusAPI.CloseMenuForPlayer(warden.Player, menu);
+            _Core.Scheduler.NextTick(() =>
+            {
+                _Extensions.PrintToChatAll("heal_accepted", true, IPrefix.JB, prisoner.Controller.PlayerName);
+                prisoner.Pawn.ItemServices?.GiveItem<CBaseEntity>("weapon_healthshot");
+                _Core.MenusAPI.CloseMenuForPlayer(warden.Player, menu);
+            });
         };
 
         var noOption = new ButtonMenuOption(_Core.Translation.GetPlayerLocalizer(warden.Player)["refuse<option>"]);
         noOption.Click += async (sender, args) =>
         {
-            prisoner.Print(IHud.Chat, "heal_refused", null, 0, true, IPrefix.JB);
-            _Core.MenusAPI.CloseMenuForPlayer(warden.Player, menu);
+            _Core.Scheduler.NextTick(() =>
+            {
+                prisoner.Print(IHud.Chat, "heal_refused", null, 0, true, IPrefix.JB);
+                _Core.MenusAPI.CloseMenuForPlayer(warden.Player, menu);
+            });
         };
 
         menu.AddOption(yesOption);

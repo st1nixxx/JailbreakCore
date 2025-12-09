@@ -372,7 +372,7 @@ public class Extensions(ISwiftlyCore core)
             MaxVisibleItems = 5,
             AutoIncreaseVisibleItems = true,
             FreezePlayer = false,
-            DisableExit = true, // prevents accidental menu closing
+            DisableExit = false, // allow Tab key to exit menu
         };
 
         var keyBinds = new MenuKeybindOverrides
@@ -1002,9 +1002,17 @@ public class Extensions(ISwiftlyCore core)
 
         foreach (var player in _Core.PlayerManager.GetAllPlayers())
         {
-            if (player.PlayerPawn?.Address == entity.Address ||
-                player.Controller?.Address == entity.Address)
-                return player;
+            try
+            {
+                if (player.PlayerPawn?.Address == entity.Address ||
+                    player.Controller?.Address == entity.Address)
+                    return player;
+            }
+            catch (NullReferenceException)
+            {
+                // Player state not fully initialized, skip
+                continue;
+            }
         }
 
         return null;

@@ -22,7 +22,7 @@ public class SDMenu(ISwiftlyCore _core, Extensions _extensions)
             var option = new ButtonMenuOption(day.Name);
             option.Click += async (sender, args) =>
             {
-                JailbreakCore.SpecialDay.Select(player, day.Name);
+                _Core.Scheduler.NextTick(() => JailbreakCore.SpecialDay.Select(player, day.Name));
             };
             menu.AddOption(option);
         }

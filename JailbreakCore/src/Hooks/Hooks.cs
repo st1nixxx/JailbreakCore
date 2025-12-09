@@ -96,9 +96,17 @@ public class Hooks(ISwiftlyCore core)
     {
         foreach (var player in _Core.PlayerManager.GetAllPlayers())
         {
-            var pawn = player.PlayerPawn;
-            if (pawn != null && pawn.Address == address)
-                return player;
+            try
+            {
+                var pawn = player.PlayerPawn;
+                if (pawn != null && pawn.Address == address)
+                    return player;
+            }
+            catch (NullReferenceException)
+            {
+                // Player state not fully initialized, skip
+                continue;
+            }
         }
 
         return null;
@@ -115,10 +123,18 @@ public class Hooks(ISwiftlyCore core)
 
         foreach (var player in _Core.PlayerManager.GetAllPlayers())
         {
-            if (player.PlayerPawn?.Address == entity.Address ||
-                player.Controller?.Address == entity.Address)
+            try
             {
-                return player;
+                if (player.PlayerPawn?.Address == entity.Address ||
+                    player.Controller?.Address == entity.Address)
+                {
+                    return player;
+                }
+            }
+            catch (NullReferenceException)
+            {
+                // Player state not fully initialized, skip
+                continue;
             }
         }
 
